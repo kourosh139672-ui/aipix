@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6d4aff">
+  <title>PixAI | دستیار هوشمند</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">✦</span><span>PixAI</span></div>
+      <button class="new-chat" id="newChat">＋ گفت‌وگوی جدید</button>
+      <div class="side-label">دستیار هوشمند</div>
+      <div class="model"><span class="status-dot"></span><span>مدل خودکار (Auto)</span></div>
+      <div class="side-note">نسخه آزمایشی PixAI</div>
+      <div class="side-footer">ساخته‌شده با هوش مصنوعی</div>
+    </aside>
+    <section class="chat">
+      <header class="topbar">
+        <button class="menu" id="menuBtn" aria-label="نمایش منو">☰</button>
+        <div><strong>گفت‌وگوی جدید</strong><small>با PixAI صحبت کن</small></div>
+        <span class="online"><i></i> آنلاین</span>
+      </header>
+      <div class="messages" id="messages">
+        <div class="welcome" id="welcome">
+          <div class="welcome-icon">✦</div>
+          <h1>سلام! من PixAI هستم</h1>
+          <p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>
+          <div class="suggestions">
+            <button class="suggestion">یک داستان کوتاه و جذاب بنویس</button>
+            <button class="suggestion">هوش مصنوعی را ساده توضیح بده</button>
+            <button class="suggestion">برای ساخت یک سایت ایده بده</button>
+          </div>
+        </div>
+      </div>
+      <div class="composer-wrap">
+        <div class="privacy">پیام‌ها و پاسخ‌ها به Vireonix فرستاده می‌شوند و ممکن است نگهداری و برای بهبود یا آموزش مدل استفاده شوند؛ اطلاعات شخصی یا محرمانه ننویس.</div>
+        <form class="composer" id="chatForm">
+          <textarea id="prompt" rows="1" placeholder="پیامت رو اینجا بنویس..." aria-label="پیام شما"></textarea>
+          <button id="sendBtn" type="submit" aria-label="ارسال پیام">➤</button>
+        </form>
+        <div class="disclaimer">PixAI ممکن است اشتباه کند؛ پاسخ‌ها را بررسی کن.</div>
+      </div>
+    </section>
+  </main>
+  <script src="./script.js"></script>
+</body>
+</html>
