@@ -1,0 +1,3 @@
+# Install a PyTorch build matching the machine's CUDA version first:
+# https://pytorch.org/get-started/locally/
+ms-swift
