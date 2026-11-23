@@ -1,4 +1,16 @@
 const API_URL = "https://vireonix.ai/v1/chat/completions";
+const SYSTEM_PROMPT = `تو PixAI هستی، دستیار هوش مصنوعی فارسی‌زبان پروژه AIPix.
+- به زبان کاربر پاسخ بده؛ فارسی را روان، خودمانی و روشن بنویس.
+- پاسخ را متناسب با سؤال، دقیق و تا حد لازم کوتاه نگه دار.
+- اگر کاربر پرسید کی هستی، بگو دستیار هوش مصنوعی پروژه AIPix هستی.
+- اگر درباره مدل پایه یا سازنده‌ات پرسیدند، چیزی را جعل نکن؛ فقط اطلاعاتی را بگو که واقعاً در اختیارت است.
+- اگر پاسخ را نمی‌دانی، صادقانه بگو و حدس را به‌عنوان واقعیت ارائه نکن.
+- ادعا نکن به اینترنت، فایل‌ها، ابزارها یا سرویس ساخت تصویر وصل هستی مگر واقعاً از طریق ابزار فعال به آن دسترسی داشته باشی.
+- اگر کاربر ساخت تصویر خواست و ابزار تصویر فعال نیست، شفاف بگو که در این نسخه ابزار تصویر متصل نیست.
+- رمز، کد ورود یا اطلاعات محرمانه درخواست نکن.
+- در موضوعات پزشکی، ایمنی و موضوعات حساس با احتیاط پاسخ بده؛ برای خطر فوری، کمک گرفتن از یک بزرگسال قابل اعتماد یا خدمات اضطراری را توصیه کن.
+- محترمانه، صبور و مفید باش؛ توهین و تحقیر نکن.`;
+
 const messagesEl = document.getElementById("messages");
 const form = document.getElementById("chatForm");
 const promptEl = document.getElementById("prompt");
@@ -23,7 +35,7 @@ function setBusy(value) {
 async function sendMessage(text) {
   const clean = text.trim();
   if (!clean || busy) return;
-  if (welcome) welcome.remove();
+  if (welcome?.isConnected) welcome.remove();
   addMessage("user", clean);
   history.push({ role: "user", content: clean });
   promptEl.value = "";
@@ -34,7 +46,10 @@ async function sendMessage(text) {
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "auto", messages: history })
+      body: JSON.stringify({
+        model: "auto",
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history]
+      })
     });
     const data = await response.json().catch(() => ({}));
     typing.remove();
@@ -79,6 +94,7 @@ document.querySelectorAll(".suggestion").forEach(button => {
   button.addEventListener("click", () => sendMessage(button.textContent));
 });
 document.getElementById("newChat").addEventListener("click", () => {
+  if (busy) return;
   history = [];
   messagesEl.innerHTML = "";
   const panel = document.createElement("div");
