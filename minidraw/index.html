@@ -2,55 +2,65 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AIPix MiniDraw</title>
+<title>AIPix MiniDraw 0.2</title>
 <style>
-:root{color-scheme:dark;--bg:#101827;--panel:#192638;--line:#30445b;--mint:#6ee7b7;--ink:#eef5ff}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#203b48,#101827 58%);color:var(--ink);font-family:Tahoma,Arial,sans-serif;padding:22px}
-main{max-width:1000px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:25px;margin:0}.tag{color:var(--mint);font-size:13px}
+:root{color-scheme:dark;--panel:#192638;--line:#30445b;--mint:#6ee7b7;--ink:#eef5ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#203b48,#101827 58%);color:var(--ink);font-family:Tahoma,Arial,sans-serif;padding:20px}
+main{max-width:1050px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:25px;margin:0}.tag{color:var(--mint);font-size:13px}
 .panel{background:#192638dd;border:1px solid var(--line);border-radius:18px;padding:16px;margin:16px 0;box-shadow:0 12px 35px #0003}
 textarea{width:100%;min-height:82px;resize:vertical;background:#0f1b2a;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:13px;font:16px Tahoma}
 .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}button{border:0;border-radius:11px;padding:11px 16px;font-weight:bold;font-size:14px;cursor:pointer;background:var(--mint);color:#10251f}button.secondary{background:#2b4057;color:var(--ink)}button:active{transform:scale(.98)}
-.stage{background:#eaf5ec;border-radius:15px;overflow:hidden;line-height:0}canvas{display:block;width:100%;height:auto}
-.note{color:#b8c9d9;font-size:12px;line-height:1.8;margin:12px 2px 0}.status{color:var(--mint);font-size:13px;margin-top:9px}
+.stage{background:#dff2e8;border-radius:15px;overflow:hidden;line-height:0}canvas{display:block;width:100%;height:auto}
+.note{color:#b8c9d9;font-size:12px;line-height:1.9;margin:12px 2px 0}.status{color:var(--mint);font-size:13px;margin-top:9px}
 </style></head>
 <body><main>
-<div class="top"><div><h1>🎨 AIPix MiniDraw</h1><div class="tag">موتور نقاشی دوبعدی • نمونه اولیه</div></div><div class="tag">بدون دانلود مدل یا API</div></div>
+<div class="top"><div><h1>🎨 AIPix MiniDraw</h1><div class="tag">نسخه ۰٫۲ • موتور نقاشی دوبعدی</div></div><div class="tag">سبک، برداری و بدون API</div></div>
 <section class="panel">
 <label for="prompt">چی بکشم؟</label>
 <textarea id="prompt">یک خانواده در جنگل پیک‌نیک می‌کنند؛ چادر، رودخانه، خرگوش و روباه هم باشد.</textarea>
 <div class="actions"><button id="draw">نقاشی کن ✨</button><button class="secondary" id="random">یک ترکیب تازه</button><button class="secondary" id="save">ذخیره PNG</button></div>
 <div class="status" id="status">آماده نقاشی</div>
 </section>
-<section class="panel"><div class="stage"><canvas id="art" width="1200" height="760" aria-label="تصویر ساخته شده"></canvas></div><p class="note">این نسخه یک نمونه سبک و قانون‌محور است: متن را با واژه‌های کلیدی می‌فهمد و اجزای برداری را کنار هم می‌چیند. هنوز مدل یادگیری عمیق یا درک آزاد زبان ندارد؛ در نسخه‌های بعدی می‌توانیم مفسر هوشمندتر و کتابخانه اجزای بیشتری اضافه کنیم.</p></section>
+<section class="panel"><div class="stage"><canvas id="art" width="1200" height="760" aria-label="تصویر ساخته شده"></canvas></div><p class="note">نسخه ۰٫۲ جزئیات بیشتری مثل درخت‌های متنوع، لایه‌های کوه، سایه، چمن، گل، چادر، سبد و حیوانات با اجزای دقیق‌تر دارد. این موتور هنوز قانون‌محور است و از مدل یادگیری عمیق استفاده نمی‌کند.</p></section>
 </main>
 <script>
-const c=document.getElementById('art'),x=c.getContext('2d'),statusEl=document.getElementById('status');
-let seed=7;function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
-function ellipse(cx,cy,rx,ry,color){x.fillStyle=color;x.beginPath();x.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);x.fill()}
-function path(points,color){x.fillStyle=color;x.beginPath();x.moveTo(...points[0]);for(let i=1;i<points.length;i++)x.lineTo(...points[i]);x.closePath();x.fill()}
-function tree(px,py,s){x.save();x.translate(px,py);x.fillStyle='#79543a';x.fillRect(-10*s,-5*s,20*s,95*s);for(let i=0;i<4;i++){ellipse((rnd()-.5)*25*s,-25*s-i*24*s,48*s,42*s,['#176b4c','#21845a','#2d9560'][i%3])}x.restore()}
-function cloud(px,py,s){ellipse(px,py,38*s,19*s,'#fff');ellipse(px-23*s,py+5*s,25*s,16*s,'#fff');ellipse(px+23*s,py+5*s,27*s,17*s,'#fff')}
-function animal(px,py,kind){x.save();x.translate(px,py);let fox=kind==='fox',fur=fox?'#e97832':'#f4f0e6';ellipse(0,0,43,27,fur);ellipse(29,-25,25,24,fur);if(fox){path([[14,-42],[20,-68],[34,-45]],'#d95e27');path([[32,-45],[48,-65],[51,-34]],'#d95e27')}else{ellipse(14,-55,10,28,'#fff');ellipse(38,-55,10,28,'#fff')}ellipse(38,-20,5,5,'#222');ellipse(48,-10,5,4,'#222');x.restore()}
-function person(px,py,shirt,scale){x.save();x.translate(px,py);x.scale(scale,scale);ellipse(0,-55,22,24,'#f0bd91');ellipse(0,-80,23,12,'#493326');x.fillStyle=shirt;x.fillRect(-19,-32,38,58);x.strokeStyle=shirt;x.lineWidth=10;x.beginPath();x.moveTo(-12,-20);x.lineTo(-35,8);x.moveTo(12,-20);x.lineTo(34,4);x.stroke();x.strokeStyle='#34445d';x.lineWidth=9;x.beginPath();x.moveTo(-9,26);x.lineTo(-13,58);x.moveTo(9,26);x.lineTo(15,58);x.stroke();x.restore()}
-function tent(px,py){path([[px-100,py],[px,py-120],[px+110,py]],'#f3a43b');path([[px-100,py],[px,py-120],[px,py]],'#ffd16a');path([[px,py-5],[px+42,py-66],[px+75,py]],'#8b572f')}
-function drawScene(prompt){seed++;let p=prompt.toLowerCase();let forest=!p.includes('شهر')&&!p.includes('خانه');let hasFox=p.includes('روباه')||p.includes('حیوان')||p.includes('جنگل');let hasRabbit=p.includes('خرگوش')||p.includes('حیوان')||p.includes('جنگل');let hasTent=p.includes('چادر')||p.includes('کمپ')||p.includes('جنگل');let hasRiver=p.includes('رود')||p.includes('آب')||p.includes('جنگل');x.clearRect(0,0,1200,760);
-let sky=x.createLinearGradient(0,0,0,760);sky.addColorStop(0,'#83d5f4');sky.addColorStop(1,'#e9f5cf');x.fillStyle=sky;x.fillRect(0,0,1200,760);cloud(180,105,1.2);cloud(820,90,.9);ellipse(1030,115,48,48,'#ffdf78');
-path([[0,390],[160,230],[300,370],[470,210],[660,390],[840,245],[1040,380],[1200,250],[1200,760],[0,760]],'#78ad77');
-if(hasRiver){path([[710,330],[850,310],[930,760],[560,760]],'#65c8dc');x.strokeStyle='#d9fbff';x.lineWidth=9;x.beginPath();x.moveTo(730,430);x.quadraticCurveTo(790,510,700,590);x.stroke()}
-x.fillStyle='#78b95c';x.fillRect(0,430,1200,330);
-for(let i=0;i<11;i++)tree(i*125-15,440+(rnd()*35),.65+rnd()*.65);
-for(let i=0;i<34;i++){let px=rnd()*1200,py=475+rnd()*260;ellipse(px,py,3+rnd()*4,3+rnd()*4,['#fff','#ffd66e','#f28eaa'][i%3])}
-if(hasTent)tent(250,570);
-if(p.includes('خانواده')||p.includes('آدم')||p.includes('پیک')||p.includes('کمپ')||p.includes('جنگل')){person(500,600,'#3988d8',1.15);person(610,605,'#b35aa5',1.08);person(710,625,'#e9a63c',.78)}
-// picnic blanket and basket
-x.save();x.translate(580,670);x.rotate(-.04);x.fillStyle='#fff0dc';x.fillRect(-155,-34,310,75);for(let i=0;i<7;i++){x.fillStyle=i%2?'#d95755':'#fff';x.fillRect(-155+i*45,-34,22,75)}x.restore();
-x.fillStyle='#a96b37';x.fillRect(540,615,68,44);x.strokeStyle='#f1c27c';x.lineWidth=7;x.beginPath();x.arc(574,617,25,Math.PI,0);x.stroke();
-if(hasRabbit)animal(170,670,'rabbit');if(hasFox)animal(970,680,'fox');
-if(p.includes('پرنده')||forest){ellipse(1040,250,22,15,'#3b8fc8');ellipse(1056,245,12,12,'#3b8fc8');path([[1064,245],[1083,250],[1065,254]],'#f5b84b')}
-x.fillStyle='#294a38';x.font='bold 25px Tahoma';x.textAlign='center';x.fillText('AIPix MiniDraw',600,735);
-statusEl.textContent='نقاشی ساخته شد؛ هر بار ترکیب کمی تغییر می‌کند.'}
+const c=document.getElementById('art'),g=c.getContext('2d'),statusEl=document.getElementById('status');
+let seed=13;function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+function oval(px,py,rx,ry,color){g.fillStyle=color;g.beginPath();g.ellipse(px,py,rx,ry,0,0,Math.PI*2);g.fill()}
+function poly(points,color){g.fillStyle=color;g.beginPath();g.moveTo(...points[0]);for(let i=1;i<points.length;i++)g.lineTo(...points[i]);g.closePath();g.fill()}
+function curve(color,draw){g.beginPath();draw();g.fillStyle=color;g.fill()}
+function line(points,color,width=3){g.beginPath();g.moveTo(...points[0]);for(let i=1;i<points.length;i++)g.lineTo(...points[i]);g.strokeStyle=color;g.lineWidth=width;g.lineCap='round';g.lineJoin='round';g.stroke()}
+function cloud(px,py,s){oval(px,py,38*s,19*s,'#fff');oval(px-24*s,py+5*s,26*s,17*s,'#fff');oval(px+24*s,py+5*s,28*s,17*s,'#fff')}
+function leafyTree(px,py,s,variant){g.save();g.translate(px,py);g.fillStyle='#765039';g.fillRect(-8*s,-4*s,16*s,95*s);if(variant%2===0){for(let k=0;k<5;k++){oval((rnd()-.5)*15*s,-28*s-k*17*s,43*s,34*s,['#176b4c','#21845a','#2d9560'][k%3])}}else{oval(0,-58*s,49*s,53*s,'#267b50');oval(-24*s,-28*s,35*s,35*s,'#318d59');oval(24*s,-25*s,36*s,37*s,'#1d7049')}g.restore()}
+function pine(px,py,s){g.save();g.translate(px,py);g.fillStyle='#79543a';g.fillRect(-6*s,5*s,12*s,65*s);for(let k=0;k<4;k++)poly([[-38*s+k*3*s,12*s-k*24*s],[0,-43*s-k*24*s],[38*s-k*3*s,12*s-k*24*s]],['#145b45','#1c704e','#23845a','#176448'][k]);g.restore()}
+function bush(px,py,s){oval(px,py,30*s,18*s,'#2d8753');oval(px-20*s,py+5*s,19*s,15*s,'#35965d');oval(px+19*s,py+5*s,20*s,15*s,'#247749')}
+function flower(px,py,s,col){line([[px,py],[px,py+13*s]],'#39834c',2);for(let k=0;k<5;k++){let a=k*Math.PI*2/5;oval(px+Math.cos(a)*5*s,py+Math.sin(a)*5*s,4*s,4*s,col)}oval(px,py,2.5*s,2.5*s,'#f4c84f')}
+function tent(px,py,s){g.save();g.translate(px,py);g.scale(s,s);poly([[-112,0],[0,-132],[120,0]],'#e99a39');poly([[-112,0],[0,-132],[0,0]],'#ffd16b');poly([[0,-3],[45,-72],[88,0]],'#81502f');line([[-112,0],[0,-132],[120,0]],'#b76b2c',6);line([[0,-132],[0,0]],'#fff0bd',3);g.restore()}
+function person(px,ground,shirt,scale,hat){g.save();g.translate(px,ground);g.scale(scale,scale);oval(0,-113,23,25,'#edbd98');oval(0,-132,24,12,hat||'#493326');oval(-8,-113,2.5,3,'#493326');oval(8,-113,2.5,3,'#493326');curve('#9a5149',()=>{g.moveTo(-6,-102);g.quadraticCurveTo(0,-96,7,-102);g.lineTo(-6,-102)});g.fillStyle=shirt;g.beginPath();g.roundRect(-22,-84,44,60,10);g.fill();line([[-14,-73],[-39,-43]],shirt,11);line([[14,-73],[37,-45]],shirt,11);line([[-9,-25],[-15,0]],'#34445d',10);line([[9,-25],[16,0]],'#34445d',10);g.restore()}
+function rabbit(px,py,s){g.save();g.translate(px,py);g.scale(s,s);oval(0,0,39,25,'#f4eee4');oval(28,-24,24,22,'#f4eee4');oval(16,-57,9,29,'#f4eee4');oval(38,-58,9,29,'#f4eee4');oval(16,-57,4,20,'#e9a6ad');oval(38,-58,4,20,'#e9a6ad');oval(37,-29,3,3,'#252525');oval(49,-17,4,3,'#d68b91');oval(-32,-9,11,11,'#fff');line([[-12,17],[-18,27]],'#c9c1b8',5);line([[22,17],[28,27]],'#c9c1b8',5);g.restore()}
+function fox(px,py,s){g.save();g.translate(px,py);g.scale(s,s);oval(-4,0,43,25,'#e97832');curve('#c85a27',()=>{g.moveTo(-35,3);g.quadraticCurveTo(-83,-25,-66,-53);g.quadraticCurveTo(-29,-43,-15,-10)});poly([[-50,-39],[-72,-58],[-66,-27]],'#fff0d9');oval(28,-26,24,22,'#e97832');poly([[10,-42],[14,-70],[34,-47]],'#d45c28');poly([[34,-46],[53,-65],[51,-29]],'#d45c28');poly([[29,-14],[55,-18],[45,-4]],'#fff0d9');oval(36,-30,3,3,'#222');oval(54,-17,4,3,'#222');line([[-20,18],[-23,29]],'#7a492f',5);line([[18,17],[22,29]],'#7a492f',5);g.restore()}
+function bird(px,py,s){g.save();g.translate(px,py);g.scale(s,s);oval(0,0,24,15,'#388fc3');oval(17,-10,12,12,'#388fc3');poly([[26,-10],[43,-5],[26,-1]],'#f4b844');oval(20,-13,2.5,2.5,'#17212a');g.restore()}
+function drawScene(prompt){seed++;const p=prompt.toLowerCase();const forest=/جنگل|درخت|کمپ|پیک.?نیک/.test(p);const animals=/حیوان|خرگوش|روباه|آهو/.test(p)||forest;const hasFox=/روباه|حیوان/.test(p)||forest;const hasRabbit=/خرگوش|حیوان/.test(p)||forest;const hasTent=/چادر|کمپ|جنگل/.test(p);const hasRiver=/رود|آب|کنار رود|جنگل/.test(p);const hasPeople=/خانواده|آدم|پیک|کمپ|جنگل/.test(p);
+g.clearRect(0,0,1200,760);
+let sky=g.createLinearGradient(0,0,0,760);sky.addColorStop(0,'#77c9ed');sky.addColorStop(.62,'#c5e9d5');sky.addColorStop(1,'#eaf0c7');g.fillStyle=sky;g.fillRect(0,0,1200,760);
+oval(1020,112,53,53,'#ffe28a');oval(1005,96,12,12,'#fff0b5');cloud(170,105,1.1);cloud(815,92,.85);
+poly([[0,390],[150,220],[300,380],[475,190],[665,390],[855,225],[1050,390],[1200,255],[1200,760],[0,760]],'#8ebc91');
+poly([[0,430],[175,300],[350,435],[530,280],[730,435],[920,300],[1090,435],[1200,360],[1200,760],[0,760]],'#6f9e79');
+if(hasRiver){curve('#66c8dc',()=>{g.moveTo(710,340);g.bezierCurveTo(850,330,805,465,900,520);g.bezierCurveTo(980,590,850,680,950,760);g.lineTo(565,760);g.bezierCurveTo(630,650,520,575,635,500);g.bezierCurveTo(700,450,650,390,710,340)});for(let i=0;i<8;i++){let yy=420+i*43;line([[700+(i%3)*35,yy],[745+(i%3)*35,yy+5]],'#d5f8f4',3)}}
+g.fillStyle='#75b85e';g.fillRect(0,430,1200,330);
+for(let i=0;i<5;i++)pine(i*285+40,425,.55+rnd()*.35);
+for(let i=0;i<7;i++)leafyTree(i*190+30,430+rnd()*25,.65+rnd()*.45,i);
+for(let i=0;i<18;i++)bush(rnd()*1200,500+rnd()*130,.5+rnd()*.65);
+for(let i=0;i<65;i++)flower(rnd()*1200,520+rnd()*220,.65+rnd()*.6,['#fff5e7','#ffd66e','#f28eaa','#c8a7ee'][i%4]);
+if(hasTent)tent(260,575,1);
+if(hasPeople){person(490,632,'#3988d8',1.12);person(610,638,'#b35aa5',1.05);person(715,645,'#e9a63c',.82,'#b87942')}
+if(p.includes('پیک')||forest){g.save();g.translate(580,678);g.rotate(-.035);g.fillStyle='#fff0dc';g.fillRect(-160,-36,320,78);for(let i=0;i<8;i++){g.fillStyle=i%2?'#d95755':'#fff';g.fillRect(-160+i*42,-36,21,78)}g.restore();g.fillStyle='#a96b37';g.fillRect(535,625,74,48);g.strokeStyle='#f1c27c';g.lineWidth=7;g.beginPath();g.arc(572,627,27,Math.PI,0);g.stroke();oval(487,653,12,12,'#d94335');oval(650,663,12,12,'#e8b43e');oval(675,660,11,11,'#69ad4b')}
+if(hasRabbit)rabbit(145,700,.95);if(hasFox)fox(1010,700,.95);bird(1050,260,1);
+for(let i=0;i<9;i++){let xx=rnd()*1200,yy=455+rnd()*280;oval(xx,yy,2,2,'#fff6d4')}
+g.fillStyle='#294a38';g.font='bold 24px Tahoma';g.textAlign='center';g.fillText('AIPix MiniDraw',600,744);
+statusEl.textContent='نسخه ۰٫۲ آماده است؛ صحنه با جزئیات بیشتر ساخته شد.'}
 document.getElementById('draw').onclick=()=>drawScene(document.getElementById('prompt').value);
 document.getElementById('random').onclick=()=>{document.getElementById('prompt').value=['یک پیک‌نیک در جنگل با خرگوش و روباه','کمپ خانوادگی کنار رودخانه با چادر و پرنده‌ها','یک روز آفتابی در جنگل با حیوانات مهربان'][Math.floor(Math.random()*3)];drawScene(document.getElementById('prompt').value)};
-document.getElementById('save').onclick=()=>{let a=document.createElement('a');a.download='aipix-minidraw.png';a.href=c.toDataURL('image/png');a.click()};
+document.getElementById('save').onclick=()=>{const a=document.createElement('a');a.download='aipix-minidraw.png';a.href=c.toDataURL('image/png');a.click()};
 drawScene(document.getElementById('prompt').value);
 </script></body></html>
