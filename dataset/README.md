@@ -1,6 +1,6 @@
 # PixAI Core training dataset
 
-This folder contains the initial Persian seed dataset for PixAI Core.
+This folder contains the expanded Persian starter dataset for PixAI Core.
 
 ## Files
 
@@ -8,7 +8,7 @@ This folder contains the initial Persian seed dataset for PixAI Core.
 
 ## Important
 
-- These are starter examples for experimentation, not a complete or validated training corpus.
+- These are starter examples for experimentation, not a complete or validated training corpus. It currently contains 59 conversation examples.
 - Review and expand the examples before fine-tuning.
 - Keep private, personal, or identifying information out of training data.
 - Do not put model weights or other large binary files in this Git repository.
