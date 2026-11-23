@@ -1,4 +1,17 @@
-const API_URL = "https://vireonix.ai/v1/chat/completions";
+const DEFAULT_API_URL = "";
+function getApiConfig() {
+  let url = sessionStorage.getItem("pixai_api_url") || "";
+  let token = sessionStorage.getItem("pixai_api_token") || "";
+  if (!url) {
+    url = (window.prompt("آدرس API را از خروجی دفترچه Colab کپی کن:") || "").trim();
+    if (!url) return null;
+    token = (window.prompt("کلید دسترسی PixAI را از خروجی Colab وارد کن:") || "").trim();
+    if (!token) return null;
+    sessionStorage.setItem("pixai_api_url", url.replace(/\\/$/, ""));
+    sessionStorage.setItem("pixai_api_token", token);
+  }
+  return { url: url.replace(/\\/$/, ""), token };
+}
 const SYSTEM_PROMPT = `تو PixAI هستی، دستیار هوش مصنوعی فارسی‌زبان پروژه AIPix.
 - به زبان کاربر پاسخ بده؛ فارسی را روان، خودمانی و روشن بنویس.
 - پاسخ را متناسب با سؤال، دقیق و تا حد لازم کوتاه نگه دار.
@@ -35,6 +48,11 @@ function setBusy(value) {
 async function sendMessage(text) {
   const clean = text.trim();
   if (!clean || busy) return;
+  const config = getApiConfig();
+  if (!config) {
+    addMessage("assistant", "اتصال PixAI تنظیم نشد. ابتدا دفترچه API را در Colab اجرا کن و آدرس و کلید را وارد کن.", "error");
+    return;
+  }
   if (welcome?.isConnected) welcome.remove();
   addMessage("user", clean);
   history.push({ role: "user", content: clean });
@@ -43,9 +61,9 @@ async function sendMessage(text) {
   setBusy(true);
   const typing = addMessage("typing", "PixAI در حال فکر کردنه…");
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(config.url.endsWith("/v1/chat/completions") ? config.url : config.url + "/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + config.token },
       body: JSON.stringify({
         model: "auto",
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history]
