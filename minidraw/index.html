@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AIPix MiniDraw</title>
+<style>
+:root{color-scheme:dark;--bg:#101827;--panel:#192638;--line:#30445b;--mint:#6ee7b7;--ink:#eef5ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#203b48,#101827 58%);color:var(--ink);font-family:Tahoma,Arial,sans-serif;padding:22px}
+main{max-width:1000px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:25px;margin:0}.tag{color:var(--mint);font-size:13px}
+.panel{background:#192638dd;border:1px solid var(--line);border-radius:18px;padding:16px;margin:16px 0;box-shadow:0 12px 35px #0003}
+textarea{width:100%;min-height:82px;resize:vertical;background:#0f1b2a;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:13px;font:16px Tahoma}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}button{border:0;border-radius:11px;padding:11px 16px;font-weight:bold;font-size:14px;cursor:pointer;background:var(--mint);color:#10251f}button.secondary{background:#2b4057;color:var(--ink)}button:active{transform:scale(.98)}
+.stage{background:#eaf5ec;border-radius:15px;overflow:hidden;line-height:0}canvas{display:block;width:100%;height:auto}
+.note{color:#b8c9d9;font-size:12px;line-height:1.8;margin:12px 2px 0}.status{color:var(--mint);font-size:13px;margin-top:9px}
+</style></head>
+<body><main>
+<div class="top"><div><h1>🎨 AIPix MiniDraw</h1><div class="tag">موتور نقاشی دوبعدی • نمونه اولیه</div></div><div class="tag">بدون دانلود مدل یا API</div></div>
+<section class="panel">
+<label for="prompt">چی بکشم؟</label>
+<textarea id="prompt">یک خانواده در جنگل پیک‌نیک می‌کنند؛ چادر، رودخانه، خرگوش و روباه هم باشد.</textarea>
+<div class="actions"><button id="draw">نقاشی کن ✨</button><button class="secondary" id="random">یک ترکیب تازه</button><button class="secondary" id="save">ذخیره PNG</button></div>
+<div class="status" id="status">آماده نقاشی</div>
+</section>
+<section class="panel"><div class="stage"><canvas id="art" width="1200" height="760" aria-label="تصویر ساخته شده"></canvas></div><p class="note">این نسخه یک نمونه سبک و قانون‌محور است: متن را با واژه‌های کلیدی می‌فهمد و اجزای برداری را کنار هم می‌چیند. هنوز مدل یادگیری عمیق یا درک آزاد زبان ندارد؛ در نسخه‌های بعدی می‌توانیم مفسر هوشمندتر و کتابخانه اجزای بیشتری اضافه کنیم.</p></section>
+</main>
+<script>
+const c=document.getElementById('art'),x=c.getContext('2d'),statusEl=document.getElementById('status');
+let seed=7;function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+function ellipse(cx,cy,rx,ry,color){x.fillStyle=color;x.beginPath();x.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);x.fill()}
+function path(points,color){x.fillStyle=color;x.beginPath();x.moveTo(...points[0]);for(let i=1;i<points.length;i++)x.lineTo(...points[i]);x.closePath();x.fill()}
+function tree(px,py,s){x.save();x.translate(px,py);x.fillStyle='#79543a';x.fillRect(-10*s,-5*s,20*s,95*s);for(let i=0;i<4;i++){ellipse((rnd()-.5)*25*s,-25*s-i*24*s,48*s,42*s,['#176b4c','#21845a','#2d9560'][i%3])}x.restore()}
+function cloud(px,py,s){ellipse(px,py,38*s,19*s,'#fff');ellipse(px-23*s,py+5*s,25*s,16*s,'#fff');ellipse(px+23*s,py+5*s,27*s,17*s,'#fff')}
+function animal(px,py,kind){x.save();x.translate(px,py);let fox=kind==='fox',fur=fox?'#e97832':'#f4f0e6';ellipse(0,0,43,27,fur);ellipse(29,-25,25,24,fur);if(fox){path([[14,-42],[20,-68],[34,-45]],'#d95e27');path([[32,-45],[48,-65],[51,-34]],'#d95e27')}else{ellipse(14,-55,10,28,'#fff');ellipse(38,-55,10,28,'#fff')}ellipse(38,-20,5,5,'#222');ellipse(48,-10,5,4,'#222');x.restore()}
+function person(px,py,shirt,scale){x.save();x.translate(px,py);x.scale(scale,scale);ellipse(0,-55,22,24,'#f0bd91');ellipse(0,-80,23,12,'#493326');x.fillStyle=shirt;x.fillRect(-19,-32,38,58);x.strokeStyle=shirt;x.lineWidth=10;x.beginPath();x.moveTo(-12,-20);x.lineTo(-35,8);x.moveTo(12,-20);x.lineTo(34,4);x.stroke();x.strokeStyle='#34445d';x.lineWidth=9;x.beginPath();x.moveTo(-9,26);x.lineTo(-13,58);x.moveTo(9,26);x.lineTo(15,58);x.stroke();x.restore()}
+function tent(px,py){path([[px-100,py],[px,py-120],[px+110,py]],'#f3a43b');path([[px-100,py],[px,py-120],[px,py]],'#ffd16a');path([[px,py-5],[px+42,py-66],[px+75,py]],'#8b572f')}
+function drawScene(prompt){seed++;let p=prompt.toLowerCase();let forest=!p.includes('شهر')&&!p.includes('خانه');let hasFox=p.includes('روباه')||p.includes('حیوان')||p.includes('جنگل');let hasRabbit=p.includes('خرگوش')||p.includes('حیوان')||p.includes('جنگل');let hasTent=p.includes('چادر')||p.includes('کمپ')||p.includes('جنگل');let hasRiver=p.includes('رود')||p.includes('آب')||p.includes('جنگل');x.clearRect(0,0,1200,760);
+let sky=x.createLinearGradient(0,0,0,760);sky.addColorStop(0,'#83d5f4');sky.addColorStop(1,'#e9f5cf');x.fillStyle=sky;x.fillRect(0,0,1200,760);cloud(180,105,1.2);cloud(820,90,.9);ellipse(1030,115,48,48,'#ffdf78');
+path([[0,390],[160,230],[300,370],[470,210],[660,390],[840,245],[1040,380],[1200,250],[1200,760],[0,760]],'#78ad77');
+if(hasRiver){path([[710,330],[850,310],[930,760],[560,760]],'#65c8dc');x.strokeStyle='#d9fbff';x.lineWidth=9;x.beginPath();x.moveTo(730,430);x.quadraticCurveTo(790,510,700,590);x.stroke()}
+x.fillStyle='#78b95c';x.fillRect(0,430,1200,330);
+for(let i=0;i<11;i++)tree(i*125-15,440+(rnd()*35),.65+rnd()*.65);
+for(let i=0;i<34;i++){let px=rnd()*1200,py=475+rnd()*260;ellipse(px,py,3+rnd()*4,3+rnd()*4,['#fff','#ffd66e','#f28eaa'][i%3])}
+if(hasTent)tent(250,570);
+if(p.includes('خانواده')||p.includes('آدم')||p.includes('پیک')||p.includes('کمپ')||p.includes('جنگل')){person(500,600,'#3988d8',1.15);person(610,605,'#b35aa5',1.08);person(710,625,'#e9a63c',.78)}
+// picnic blanket and basket
+x.save();x.translate(580,670);x.rotate(-.04);x.fillStyle='#fff0dc';x.fillRect(-155,-34,310,75);for(let i=0;i<7;i++){x.fillStyle=i%2?'#d95755':'#fff';x.fillRect(-155+i*45,-34,22,75)}x.restore();
+x.fillStyle='#a96b37';x.fillRect(540,615,68,44);x.strokeStyle='#f1c27c';x.lineWidth=7;x.beginPath();x.arc(574,617,25,Math.PI,0);x.stroke();
+if(hasRabbit)animal(170,670,'rabbit');if(hasFox)animal(970,680,'fox');
+if(p.includes('پرنده')||forest){ellipse(1040,250,22,15,'#3b8fc8');ellipse(1056,245,12,12,'#3b8fc8');path([[1064,245],[1083,250],[1065,254]],'#f5b84b')}
+x.fillStyle='#294a38';x.font='bold 25px Tahoma';x.textAlign='center';x.fillText('AIPix MiniDraw',600,735);
+statusEl.textContent='نقاشی ساخته شد؛ هر بار ترکیب کمی تغییر می‌کند.'}
+document.getElementById('draw').onclick=()=>drawScene(document.getElementById('prompt').value);
+document.getElementById('random').onclick=()=>{document.getElementById('prompt').value=['یک پیک‌نیک در جنگل با خرگوش و روباه','کمپ خانوادگی کنار رودخانه با چادر و پرنده‌ها','یک روز آفتابی در جنگل با حیوانات مهربان'][Math.floor(Math.random()*3)];drawScene(document.getElementById('prompt').value)};
+document.getElementById('save').onclick=()=>{let a=document.createElement('a');a.download='aipix-minidraw.png';a.href=c.toDataURL('image/png');a.click()};
+drawScene(document.getElementById('prompt').value);
+</script></body></html>
