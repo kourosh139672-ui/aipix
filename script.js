@@ -77,6 +77,7 @@ function addMessage(role, content, extra = "", imageData = null) {
     el.appendChild(document.createElement("br"));
     el.appendChild(image);
   }
+  if (role === "assistant" && codeMode) renderProjectFiles(el, content);
   messagesEl.appendChild(el);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return el;
