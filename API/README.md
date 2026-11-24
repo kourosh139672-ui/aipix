@@ -56,3 +56,13 @@ PixAI Code requests a consistent project tree and emits files using `### FILE: p
 - Response: `{ "created": 0, "model": "...", "data": [{ "url": "https://...mp4" }] }` (timestamp shown as an example).
 - Initial release accepts six-second clips and 720p landscape or portrait. Provider usage is billed by Cloudflare; this is not an unlimited free service.
 - Keep the video model behind the Worker route so providers can be changed without rewriting the frontend. The frontend does not claim success unless it receives a valid HTTPS video URL.
+
+
+## PixAI MusicEngine
+
+- `POST /v1/music/generations`
+- Provider: Stability AI Stable Audio 2.5 API.
+- Request: `{ "prompt": "A calm instrumental piano piece", "duration": 30 }`
+- Response: binary MP3 audio (`audio/mpeg`).
+- Configure `STABILITY_API_KEY` as a Cloudflare Worker secret. Never put the provider key in browser JavaScript or GitHub.
+- Each Stable Audio 2.5 API generation costs 20 credits. New API accounts start with 25 credits, enough for one generation only.
