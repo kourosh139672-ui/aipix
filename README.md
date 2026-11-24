@@ -65,3 +65,8 @@ PixAI Code supports multi-file project responses. It recognizes `### FILE: path/
 ## PixAI VideoEngine 2D
 
 The frontend now includes a separate entry point for the planned 2D video engine. This is an interface scaffold only: it does not generate videos yet. A compatible video-generation model/provider, server-side API route, job handling, and video playback/download support still need to be implemented. The interface explicitly reports that generation is not connected rather than pretending a video was created.
+
+
+## PixAI VideoEngine 2D
+
+The first video-generation route is deployed on the Cloudflare Worker at `POST /v1/videos/generations`, using the `lightricks/ltx-2-3-fast` model through Workers AI. The UI supports text-to-video and optional image-to-video by HTTPS image URL, with six-second 720p clips. Video generation is billed by Cloudflare and is not unlimited or free. The model adapter stays server-side so the provider can be replaced independently. Actual provider generation still needs an end-to-end runtime test.
