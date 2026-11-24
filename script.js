@@ -210,7 +210,7 @@ async function createPixAIImage(userPrompt) {
   addMessage("user", userPrompt);
   setBusy(true);
   const status = addMessage("typing", "PixAI در حال طراحی تصویر دوبعدی است…");
-  const instruction = 'تو طراح گرافیک دوبعدی PixAI هستی. درخواست فارسی را به تصویر قابل رسم با Canvas تبدیل کن. فقط JSON معتبر بده: {"title":"عنوان","background":"#hex","objects":[{"type":"rect|circle|ellipse|triangle|star|text|line|sun|cloud|tree|house|mountain|person","x":50,"y":50,"width":20,"height":20,"color":"#hex","stroke":"#hex","text":"متن"}]}. مختصات و اندازه‌ها درصدی از 0 تا 100 هستند. حداکثر 24 شیء. صحنه کامل و منظم طراحی کن. فقط JSON.';
+  const instruction = 'تو کارگردان هنری و طراح صحنه حرفه‌ای PixAI ImageEngine 2D هستی. درخواست فارسی را به یک تصویر دوبعدی پرجزئیات و خوش‌ترکیب تبدیل کن. فقط JSON معتبر بده با این ساختار: {"title":"عنوان","background":"#hex","objects":[{"type":"rect|circle|ellipse|triangle|star|text|line|sun|cloud|tree|house|mountain|person|grass|flower|bush|rock|water|wood","x":50,"y":50,"width":20,"height":20,"color":"#hex","stroke":"#hex","text":"","detail":55,"seed":123}]}. مختصات و اندازه‌ها درصدی از 0 تا 100 هستند. حداکثر 40 شیء. برای چمن از grass با detail بالا استفاده کن تا تیغه‌های متعدد و طبیعی ساخته شوند؛ برای گل و بوته و سنگ و آب از نوع مناسب استفاده کن. از چند لایه پیش‌زمینه، میان‌زمینه و پس‌زمینه، تنوع اندازه، سایه‌روشن رنگی و پالت هماهنگ استفاده کن. اشیاء را با ترتیب درست از پس‌زمینه به پیش‌زمینه بچین. جزئیات را متناسب با درخواست انتخاب کن و از شلوغی بی‌دلیل پرهیز کن. فقط JSON بدون Markdown.';
   try {
     const response = await fetch(config.url + "/v1/chat/completions", {
       method: "POST",
