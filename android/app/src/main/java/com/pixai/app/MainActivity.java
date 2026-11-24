@@ -370,7 +370,7 @@ public class MainActivity extends Activity {
         JSONObject response;
         try { response = new JSONObject(raw); }
         catch (Exception e) { throw new Exception("پاسخ نامعتبر از سرور (HTTP " + code + ")"); }
-        if (code < 200 || code >= 300) throw new Exception(response.optString("error", "HTTP " + code));
+        if (code < 200 || code >= 300) { String message = response.optString("error", "HTTP " + code); String detail = response.optString("detail", ""); if (!detail.isEmpty()) message += "\\n" + detail; throw new Exception("HTTP " + code + ": " + message); }
         JSONArray choices = response.optJSONArray("choices");
         if (choices == null || choices.length() == 0) throw new Exception(response.optString("error", "پاسخ خالی از سرور"));
         JSONObject message = choices.getJSONObject(0).optJSONObject("message");
