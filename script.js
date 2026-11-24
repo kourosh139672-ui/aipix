@@ -101,6 +101,8 @@ try {
 let busy = false;
 let codeMode = false;
 let videoMode = false;
+let imageMode = false;
+const imageModeButton = document.getElementById('imageMode');
 const videoModeButton = document.getElementById('videoMode');
 const codeModeButton = document.getElementById("codeMode");
 function updateCodeMode() {
@@ -108,7 +110,7 @@ function updateCodeMode() {
   codeModeButton.textContent = codeMode ? "⌘ حالت برنامه‌نویسی: روشن" : "⌘ حالت برنامه‌نویسی: خاموش";
   codeModeButton.classList.toggle("active", codeMode);
   const heading = document.querySelector(".topbar strong");
-  if (heading) heading.textContent = videoMode ? "PixAI VideoEngine 2D" : codeMode ? "PixAI Code" : "گفت‌وگوی جدید";
+  if (heading) heading.textContent = imageMode ? "PixAI ImageEngine 2D" : videoMode ? "PixAI VideoEngine 2D" : codeMode ? "PixAI Code" : "گفت‌وگوی جدید";
 }
 
 
@@ -200,9 +202,59 @@ async function createMotionVideo(userPrompt){
  try{const r=await fetch(config.url+"/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+config.token},body:JSON.stringify({model:"auto",client_id:PIXAI_CLIENT_ID,reasoning_level:reasoningLevel,messages:[{role:"system",content:instruction},{role:"user",content:userPrompt}],max_tokens:1000})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||(d.error&&d.error.message)||"خطای سرویس "+r.status);let raw=d.choices&&d.choices[0]&&d.choices[0].message?d.choices[0].message.content:"";raw=raw.trim().replace(/^`{3}(?:json)?\s*/i,"").replace(/\s*`{3}$/,"");let a=raw.indexOf("{"),z=raw.lastIndexOf("}");if(a<0||z<=a)throw Error("مدل JSON معتبر برنگرداند.");let scene=JSON.parse(raw.slice(a,z+1));status.remove();const card=document.createElement("section");card.className="message assistant motion-result";const title=document.createElement("strong");title.textContent="PixAI Motion Engine · "+(scene.title||"انیمیشن دوبعدی");const stage=document.createElement("div");stage.className="motion-stage";const controls=document.createElement("div");controls.className="motion-actions";const p=document.createElement("button"),s=document.createElement("button"),e=document.createElement("button");p.textContent="▶ پیش‌نمایش";s.textContent="■ توقف";e.textContent="⬇ ساخت ویدیو";[p,s,e].forEach(x=>x.type="button");const note=document.createElement("small");note.textContent="رندر محلی · خروجی WebM";controls.append(p,s,e);card.append(title,stage,controls,note);messagesEl.appendChild(card);const engine=window.PixAIMotionEngine.mount(stage,scene);p.onclick=()=>engine.play();s.onclick=()=>engine.stop();e.onclick=async()=>{e.disabled=true;e.textContent="در حال ضبط…";try{let blob=await engine.exportVideo(),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="pixai-motion.webm";a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);e.textContent="ویدیو آماده شد"}catch(err){note.textContent=String(err.message||err);e.textContent="تلاش دوباره"}finally{e.disabled=false}};messagesEl.scrollTop=messagesEl.scrollHeight}catch(err){status.remove();addMessage("assistant",String(err.message||err),"error")}finally{setBusy(false);promptEl.focus()}
 }
 
+
+async function createPixAIImage(userPrompt) {
+  if (busy) return;
+  const config = getApiConfig();
+  if (!config) return;
+  addMessage("user", userPrompt);
+  setBusy(true);
+  const status = addMessage("typing", "PixAI در حال طراحی تصویر دوبعدی است…");
+  const instruction = 'تو طراح گرافیک دوبعدی PixAI هستی. درخواست فارسی را به تصویر قابل رسم با Canvas تبدیل کن. فقط JSON معتبر بده: {"title":"عنوان","background":"#hex","objects":[{"type":"rect|circle|ellipse|triangle|star|text|line|sun|cloud|tree|house|mountain|person","x":50,"y":50,"width":20,"height":20,"color":"#hex","stroke":"#hex","text":"متن"}]}. مختصات و اندازه‌ها درصدی از 0 تا 100 هستند. حداکثر 24 شیء. صحنه کامل و منظم طراحی کن. فقط JSON.';
+  try {
+    const response = await fetch(config.url + "/v1/chat/completions", {
+      method: "POST",
+      headers: {"Content-Type":"application/json","Authorization":"Bearer " + config.token},
+      body: JSON.stringify({model:"auto",client_id:PIXAI_CLIENT_ID,reasoning_level:reasoningLevel,messages:[{role:"system",content:instruction},{role:"user",content:userPrompt}],max_tokens:1400})
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || data.error?.message || "خطای سرویس " + response.status);
+    let raw = data.choices?.[0]?.message?.content || "";
+    raw = raw.trim().replace(/^\x60{3}(?:json)?\s*/i,"").replace(/\s*\x60{3}$/,"");
+    const first = raw.indexOf("{"), last = raw.lastIndexOf("}");
+    if (first < 0 || last <= first) throw new Error("مدل طرح تصویری معتبری برنگرداند.");
+    const scene = JSON.parse(raw.slice(first,last+1));
+    status.remove();
+    const card = document.createElement("section");
+    card.className = "message assistant image-result";
+    const heading = document.createElement("strong");
+    heading.textContent = "PixAI ImageEngine · " + (scene.title || "تصویر دوبعدی");
+    const stage = document.createElement("div");
+    stage.className = "image-engine-stage";
+    const actions = document.createElement("div");
+    actions.className = "image-engine-actions";
+    const save = document.createElement("button");
+    save.type = "button";
+    save.textContent = "⬇ ذخیره تصویر PNG";
+    actions.appendChild(save);
+    card.append(heading,stage,actions);
+    messagesEl.appendChild(card);
+    const result = window.PixAIImageEngine.render(stage,scene);
+    save.addEventListener("click",() => result.download());
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  } catch (error) {
+    status.remove();
+    addMessage("assistant",String(error.message || error),"error");
+  } finally {
+    setBusy(false);
+    promptEl.focus();
+  }
+}
+
 async function sendMessage(text) {
   const clean = text.trim();
   if (!clean || busy) return;
+  if (imageMode) { promptEl.value = ''; promptEl.style.height = 'auto'; createPixAIImage(clean); return; }
   if (videoMode) { promptEl.value = ''; promptEl.style.height = 'auto'; createMotionVideo(clean); return; }
   const config = getApiConfig();
   if (!config) {
@@ -374,8 +426,33 @@ document.querySelectorAll(".suggestion").forEach(button => {
   button.addEventListener("click", () => sendMessage(button.textContent));
 });
 
+
+imageModeButton?.addEventListener("click", () => {
+  if (busy) return;
+  imageMode = !imageMode;
+  videoMode = false;
+  codeMode = false;
+  videoModeButton?.classList.remove("active");
+  codeModeButton?.classList.remove("active");
+  archiveCurrentChat();
+  history = [];
+  messagesEl.innerHTML = "";
+  const panel = document.createElement("div");
+  panel.className = "welcome";
+  panel.innerHTML = imageMode
+    ? '<div class="welcome-icon">🎨</div><h1>PixAI ImageEngine</h1><p>درخواست فارسی بنویس؛ موتور اختصاصی Canvas تصویر دوبعدی می‌سازد.</p><p class="image-engine-status">رندر روی دستگاه · بدون API پولی تصویرساز · خروجی PNG</p>'
+    : '<div class="welcome-icon">✦</div><h1>سلام! من PixAI هستم</h1><p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>';
+  messagesEl.appendChild(panel);
+  imageModeButton.classList.toggle("active",imageMode);
+  promptEl.placeholder = imageMode ? "تصویری که می‌خوای بسازی رو توصیف کن..." : "پیامت رو اینجا بنویس...";
+  updateCodeMode();
+  promptEl.focus();
+});
+
 videoModeButton?.addEventListener('click', () => {
   if (busy) return;
+  imageMode = false;
+  imageModeButton?.classList.remove('active');
   videoMode = !videoMode;
   codeMode = false;
   archiveCurrentChat();
@@ -394,6 +471,8 @@ videoModeButton?.addEventListener('click', () => {
 
 codeModeButton?.addEventListener("click", () => {
   videoMode = false;
+  imageMode = false;
+  imageModeButton?.classList.remove('active');
   videoModeButton?.classList.remove('active');
   if (busy) return;
   codeMode = !codeMode;
@@ -412,6 +491,8 @@ codeModeButton?.addEventListener("click", () => {
 document.getElementById("newChat").addEventListener("click", () => {
   if (busy) return;
   videoMode = false;
+  imageMode = false;
+  imageModeButton?.classList.remove("active");
   videoModeButton?.classList.remove("active");
   promptEl.placeholder = "پیامت رو اینجا بنویس...";
   archiveCurrentChat();
