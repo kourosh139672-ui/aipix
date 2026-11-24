@@ -51,3 +51,8 @@ The Worker uses GLM-4.7-Flash for conversation and FLUX.2 Klein 4B for image gen
 The browser asks for the private API token at runtime and keeps it only in session storage. Do not commit the token to this repository. For a public production app, replace browser-held bearer tokens with a server-side session or an abuse-protected authentication flow.
 
 This is tool orchestration through function calling and instructions, not a new fine-tune. The current live tool set contains image generation; additional tools should be added with explicit schemas, server-side validation, and UI handling.
+
+
+## PixAI Code (Qwen)
+
+A separate Code mode has been added to the frontend. It calls `POST /v1/code/completions` on the Cloudflare Worker and uses Alibaba Cloud Model Studio `qwen3-coder-flash`. Configure `QWEN_API_URL` (the workspace/region-specific OpenAI-compatible base URL) and `QWEN_API_KEY` as Worker-side settings before using it. The provider key is never placed in browser code. The first milestone generates and reviews code; it does not execute code or write files automatically. Those project tools will be implemented separately with explicit validation and safe execution boundaries.
