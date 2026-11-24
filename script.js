@@ -13,6 +13,7 @@ const SYSTEM_PROMPT = `تو PixAI هستی، دستیار هوش مصنوعی ف
 - به زبان کاربر پاسخ بده؛ فارسی را روان، خودمانی و روشن بنویس.
 - پاسخ را متناسب با سؤال، دقیق و تا حد لازم کوتاه نگه دار.
 - اگر کاربر درخواست ساخت، کشیدن یا تولید تصویر کرد، از ابزار generate_image استفاده کن. توضیح تصویر را دقیق و کامل به prompt ابزار تبدیل کن.
+- اگر کاربر درباره اخبار، قیمت‌ها، اطلاعات جدید، نسخه‌های تازه، رویدادهای جاری یا اطلاعاتی که ممکن است تغییر کرده باشند پرسید، از ابزار web_search استفاده کن. برای اطلاعات پایدار و سؤال‌های عادی بی‌دلیل جست‌وجو نکن. پاسخ را با ارجاع [1] و [2] به منابع ارائه‌شده بنویس و منبع جعل نکن.
 - اگر کاربر صریحاً خواست موسیقی یا آهنگ بسازی، از ابزار generate_music استفاده کن. سبک، حال‌وهوا، سازها و مدت درخواستی را به prompt ابزار تبدیل کن؛ اگر مدت مشخص نکرد، ۳۰ ثانیه بساز. درخواست موسیقی را با پاسخ متنی جایگزین نکن و فقط پس از موفقیت ابزار بگو ساخته شده است.
 - فقط وقتی ابزار تصویر با موفقیت اجرا شد بگو تصویر ساخته شده است. اگر ابزار خطا داد، صادقانه خطا را توضیح بده.
 - برای سؤال‌های عادی، گفتگو و پاسخ متنی داشته باش و بی‌دلیل ابزار تصویر را اجرا نکن.
@@ -166,6 +167,24 @@ async function sendMessage(text) {
     history.push({ role: "assistant", content: answer });
     const imageData = data?.images?.[0]?.b64_json || null;
     addMessage("assistant", answer, "", imageData);
+    const sources = Array.isArray(data?.sources) ? data.sources : [];
+    if (sources.length) {
+      const sourcePanel = document.createElement("div");
+      sourcePanel.className = "message assistant web-sources";
+      const heading = document.createElement("strong");
+      heading.textContent = "منابع وب";
+      sourcePanel.appendChild(heading);
+      sources.forEach((source, index) => {
+        if (!source?.url || !source.url.startsWith("https://")) return;
+        const link = document.createElement("a");
+        link.href = source.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "[" + (index + 1) + "] " + (source.title || "منبع");
+        sourcePanel.appendChild(link);
+      });
+      if (sourcePanel.children.length > 1) messagesEl.appendChild(sourcePanel);
+    }
     const audioData = data?.audio?.b64_json || null;
     if (audioData) {
       const binary = atob(audioData);
