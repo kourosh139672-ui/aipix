@@ -89,6 +89,39 @@ function setBusy(value) {
   sendBtn.disabled = value;
   sendBtn.textContent = value ? "…" : "➤";
 }
+
+async function generateVideo(prompt) {
+  if (busy) return;
+  const config = getApiConfig();
+  if (!config) return;
+  const imageUri = (document.getElementById("videoImageUrl")?.value || "").trim();
+  if (imageUri && !imageUri.startsWith("https://")) { addMessage("assistant", "لینک تصویر باید HTTPS باشد.", "error"); return; }
+  const style = document.getElementById("videoStyle")?.value || "2d";
+  const styleText = style === "anime" ? "2D anime animation. " : style === "cartoon" ? "2D cartoon animation. " : "Hand-drawn 2D animation. ";
+  addMessage("user", prompt);
+  setBusy(true);
+  const status = addMessage("typing", "در حال ساخت ویدیو…");
+  try {
+    const response = await fetch(config.url + "/v1/videos/generations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + config.token },
+      body: JSON.stringify({ prompt: styleText + "Clean outlines, flat colors, consistent characters, smooth motion. " + prompt, duration: 6, resolution: "1280x720", fps: 24, generate_audio: false, ...(imageUri ? { image_uri: imageUri } : {}) })
+    });
+    const data = await response.json().catch(() => ({}));
+    status.remove();
+    if (!response.ok) throw new Error(data.detail || data.error || "خطای سرویس ویدیو: " + response.status);
+    const videoUrl = data.data?.[0]?.url || data.video_url;
+    if (!videoUrl || !videoUrl.startsWith("https://")) throw new Error("لینک ویدیوی معتبر دریافت نشد.");
+    const card = document.createElement("div");
+    card.className = "message assistant video-result";
+    const title = document.createElement("strong"); title.textContent = "ویدیوی PixAI آماده است";
+    const video = document.createElement("video"); video.controls = true; video.playsInline = true; video.src = videoUrl;
+    const link = document.createElement("a"); link.href = videoUrl; link.target = "_blank"; link.rel = "noopener"; link.textContent = "باز کردن یا ذخیره ویدیو";
+    card.append(title, video, link); messagesEl.appendChild(card); messagesEl.scrollTop = messagesEl.scrollHeight;
+  } catch (error) { status.remove(); addMessage("assistant", String(error.message || error), "error"); }
+  finally { setBusy(false); promptEl.focus(); }
+}
+
 async function sendMessage(text) {
   const clean = text.trim();
   if (!clean || busy) return;
