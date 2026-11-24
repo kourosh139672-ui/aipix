@@ -45,3 +45,14 @@ The browser renders an image only when the API returns image data. The assistant
 
 ### Multi-file project output
 PixAI Code requests a consistent project tree and emits files using `### FILE: path/to/file.ext` followed by a fenced code block. The frontend extracts these blocks and offers each file as a separate download. Code is not executed automatically.
+
+
+## PixAI VideoEngine 2D
+
+- `POST /v1/videos/generations`
+- Model: `lightricks/ltx-2-3-fast` through the Cloudflare Workers AI binding.
+- Request: `{ "prompt": "A hand-drawn 2D animation...", "duration": 6, "resolution": "1280x720", "fps": 24, "generate_audio": false }`
+- Optional image-to-video: add `image_uri` with an HTTPS URL reachable by the provider.
+- Response: `{ "created": 0, "model": "...", "data": [{ "url": "https://...mp4" }] }` (timestamp shown as an example).
+- Initial release accepts six-second clips and 720p landscape or portrait. Provider usage is billed by Cloudflare; this is not an unlimited free service.
+- Keep the video model behind the Worker route so providers can be changed without rewriting the frontend. The frontend does not claim success unless it receives a valid HTTPS video URL.
