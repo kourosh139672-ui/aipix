@@ -210,6 +210,71 @@ async function sendMessage(text) {
     promptEl.focus();
   }
 }
+
+const micBtn = document.getElementById("micBtn");
+let recognition = null;
+let listening = false;
+let speechBaseText = "";
+function resizePrompt() {
+  promptEl.style.height = "auto";
+  promptEl.style.height = Math.min(promptEl.scrollHeight, 130) + "px";
+}
+function setMicState(active) {
+  listening = active;
+  if (!micBtn) return;
+  micBtn.classList.toggle("recording", active);
+  micBtn.setAttribute("aria-pressed", String(active));
+  micBtn.title = active ? "توقف ضبط صدا" : "تایپ صوتی فارسی";
+  micBtn.textContent = active ? "■" : "🎙";
+}
+function startVoiceTyping() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    addMessage("assistant", "این مرورگر قابلیت تشخیص گفتار را ندارد. از مرورگر دیگری که Speech Recognition را پشتیبانی می‌کند استفاده کن.", "error");
+    return;
+  }
+  if (recognition && listening) {
+    recognition.stop();
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = "fa-IR";
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  speechBaseText = promptEl.value.trim();
+  setMicState(true);
+  recognition.onresult = event => {
+    let finalText = "";
+    let interimText = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const part = event.results[i][0].transcript;
+      if (event.results[i].isFinal) finalText += part;
+      else interimText += part;
+    }
+    const spoken = (finalText + (interimText ? " " + interimText : "")).trim();
+    promptEl.value = [speechBaseText, spoken].filter(Boolean).join(speechBaseText ? " " : "");
+    resizePrompt();
+  };
+  recognition.onerror = event => {
+    const messages = {
+      "not-allowed": "دسترسی میکروفون داده نشد. اجازهٔ استفاده از میکروفون را در مرورگر بررسی کن.",
+      "language-not-supported": "این مرورگر یا سرویس گفتار، زبان فارسی (fa-IR) را پشتیبانی نمی‌کند.",
+      "network": "سرویس تشخیص گفتار به شبکه وصل نشد.",
+      "no-speech": "صدایی تشخیص داده نشد؛ دوباره امتحان کن."
+    };
+    addMessage("assistant", messages[event.error] || ("تایپ صوتی با خطا روبه‌رو شد: " + event.error), "error");
+  };
+  recognition.onend = () => setMicState(false);
+  try {
+    recognition.start();
+  } catch (error) {
+    setMicState(false);
+    addMessage("assistant", "شروع تایپ صوتی ممکن نشد. کمی صبر کن و دوباره امتحان کن.", "error");
+  }
+}
+micBtn?.addEventListener("click", startVoiceTyping);
+
 form.addEventListener("submit", event => {
   event.preventDefault();
   sendMessage(promptEl.value);
