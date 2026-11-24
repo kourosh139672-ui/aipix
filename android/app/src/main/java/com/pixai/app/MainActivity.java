@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
-    private static final String API = "https://aipix-api.kourosh-1396-72.workers.dev";
+    private static final String API = "https://aipix-mobile.kourosh-1396-72.workers.dev";
     private static final String SYSTEM = "تو PixAI هستی، دستیار فارسی‌زبان PixCore 1. به فارسی روان، دقیق و طبیعی پاسخ بده. از تاریخچه همین گفتگو استفاده کن. اگر ابزاری در دسترس نیست، صادقانه بگو و ادعای موفقیت نکن.";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final ArrayList<JSONObject> history = new ArrayList<>();
