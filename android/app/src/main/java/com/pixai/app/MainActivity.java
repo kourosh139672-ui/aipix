@@ -1,188 +1,34 @@
 package com.pixai.app;
-
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.os.Bundle;
-import android.view.Gravity;
-import android.view.View;
-import android.view.inputmethod.EditorInfo;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.SeekBar;
-import android.widget.TextView;
-import android.widget.Toast;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import android.app.*;import android.content.*;import android.graphics.*;import android.graphics.drawable.GradientDrawable;import android.net.Uri;import android.os.Bundle;import android.provider.MediaStore;import android.speech.RecognizerIntent;import android.view.*;import android.view.inputmethod.EditorInfo;import android.widget.*;
+import org.json.*;import java.io.*;import java.net.*;import java.util.*;import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
-    private static final String API_URL = "https://aipix-api.kourosh-1396-72.workers.dev";
-    private static final String PREFS = "pixai_native";
-    private static final String SYSTEM = "تو PixAI هستی، دستیار هوش مصنوعی فارسی‌زبان. به زبان کاربر، روان و دقیق پاسخ بده. از پیام‌های قبلی همین گفتگو استفاده کن. اگر ابزار لازم در دسترس نیست، صادقانه بگو و ادعای انجام کار نکن.";
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final ArrayList<JSONObject> history = new ArrayList<>();
-    private LinearLayout root, messages, header;
-    private ScrollView scroll;
-    private EditText composer;
-    private Button send;
-    private TextView status;
-    private int reasoningLevel = 1;
-    private String clientId;
-    private boolean busy = false;
-
-    @Override public void onCreate(Bundle state) {
-        super.onCreate(state);
-        getWindow().setStatusBarColor(Color.rgb(15, 18, 32));
-        getWindow().setNavigationBarColor(Color.rgb(15, 18, 32));
-        getWindow().getDecorView().setSystemUiVisibility(0);
-        clientId = getPreferences(0).getString("client_id", null);
-        if (clientId == null) {
-            clientId = UUID.randomUUID().toString();
-            getPreferences(0).edit().putString("client_id", clientId).apply();
-        }
-        reasoningLevel = getPreferences(0).getInt("reasoning", 1);
-        buildUi();
-        restoreHistory();
-        if (getPreferences(0).getString("api_token", "").isEmpty()) showSettings();
-    }
-
-    private int dp(float v) { return (int)(v * getResources().getDisplayMetrics().density + 0.5f); }
-    private GradientDrawable bg(int color, int radius) {
-        GradientDrawable d = new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(radius)); return d;
-    }
-    private TextView label(String text, int size, int color, boolean bold) {
-        TextView v = new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(color);
-        if (bold) v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        return v;
-    }
-    private void buildUi() {
-        root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.rgb(15,18,32));
-        setContentView(root);
-        header = new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL); header.setPadding(dp(18),dp(14),dp(14),dp(14));
-        header.setBackgroundColor(Color.rgb(22,27,46));
-        TextView brand = label("PixAI", 23, Color.WHITE, true);
-        TextView sub = label("  PixCore 1 · دستیار هوشمند", 12, Color.rgb(169,180,210), false);
-        LinearLayout title = new LinearLayout(this); title.setOrientation(LinearLayout.VERTICAL); title.addView(brand); title.addView(sub);
-        header.addView(title, new LinearLayout.LayoutParams(0,-2,1));
-        Button settings = smallButton("⚙"); settings.setOnClickListener(v -> showSettings()); header.addView(settings);
-        root.addView(header);
-        scroll = new ScrollView(this); scroll.setFillViewport(true);
-        messages = new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL); messages.setPadding(dp(14),dp(18),dp(14),dp(18));
-        scroll.addView(messages); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        status = label("آماده‌ام. پیام خودت رو بنویس.",12,Color.rgb(155,168,199),false);
-        status.setPadding(dp(16),dp(6),dp(16),dp(6)); root.addView(status);
-        LinearLayout bottom = new LinearLayout(this); bottom.setGravity(Gravity.CENTER_VERTICAL); bottom.setPadding(dp(10),dp(8),dp(10),dp(12)); bottom.setBackgroundColor(Color.rgb(22,27,46));
-        composer = new EditText(this); composer.setTextColor(Color.WHITE); composer.setHintTextColor(Color.rgb(145,155,180));
-        composer.setHint("پیامت رو بنویس…"); composer.setTextSize(15); composer.setSingleLine(false); composer.setMaxLines(4);
-        composer.setPadding(dp(14),dp(10),dp(14),dp(10)); composer.setBackground(bg(Color.rgb(37,44,67),22));
-        composer.setImeOptions(EditorInfo.IME_ACTION_SEND);
-        composer.setOnEditorActionListener((v, action, event) -> { if(action==EditorInfo.IME_ACTION_SEND){sendMessage();return true;} return false;});
-        bottom.addView(composer,new LinearLayout.LayoutParams(0,-2,1));
-        send = new Button(this); send.setText("ارسال"); send.setTextColor(Color.WHITE); send.setAllCaps(false); send.setBackground(bg(Color.rgb(101,76,220),20));
-        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-2,dp(48)); bp.setMargins(dp(8),0,0,0); bottom.addView(send,bp);
-        send.setOnClickListener(v -> sendMessage()); root.addView(bottom);
-        addWelcome();
-    }
-    private Button smallButton(String text) {
-        Button b = new Button(this); b.setText(text); b.setTextSize(18); b.setTextColor(Color.WHITE); b.setAllCaps(false); b.setBackground(bg(Color.rgb(45,51,75),16)); return b;
-    }
-    private void addWelcome() {
-        if (messages.getChildCount()>0) return;
-        TextView w = label("سلام! من PixCore 1 هستم.\nهر چیزی خواستی بپرس تا با هم جلو بریم.",17,Color.WHITE,true);
-        w.setPadding(dp(16),dp(18),dp(16),dp(18)); w.setBackground(bg(Color.rgb(34,42,65),18));
-        messages.addView(w,new LinearLayout.LayoutParams(-1,-2));
-    }
-    private void addBubble(String text, boolean user) {
-        TextView bubble = label(text,15,user?Color.WHITE:Color.rgb(235,239,250),false);
-        bubble.setTextIsSelectable(true); bubble.setPadding(dp(14),dp(12),dp(14),dp(12));
-        bubble.setBackground(bg(user?Color.rgb(86,66,183):Color.rgb(35,43,65),18));
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(user?dp(300):-1,-2);
-        p.gravity = user?Gravity.RIGHT:Gravity.LEFT; p.bottomMargin=dp(10);
-        messages.addView(bubble,p); scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
-    }
-    private void restoreHistory() {
-        try {
-            JSONArray saved = new JSONArray(getPreferences(0).getString("history","[]"));
-            for(int i=0;i<saved.length();i++) {
-                JSONObject m=saved.getJSONObject(i); history.add(m);
-                String role=m.optString("role"); if("user".equals(role)||"assistant".equals(role)) addBubble(m.optString("content"),"user".equals(role));
-            }
-        } catch(Exception ignored) {}
-    }
-    private void saveHistory() {
-        JSONArray a=new JSONArray(); for(JSONObject m:history) a.put(m);
-        getPreferences(0).edit().putString("history",a.toString()).apply();
-    }
-    private void sendMessage() {
-        if(busy) return;
-        String text=composer.getText().toString().trim(); if(text.isEmpty()) return;
-        String token=getPreferences(0).getString("api_token","");
-        if(token.isEmpty()){showSettings();return;}
-        composer.setText(""); addBubble(text,true);
-        try { history.add(new JSONObject().put("role","user").put("content",text)); } catch(Exception ignored) {}
-        saveHistory(); busy=true; send.setEnabled(false); status.setText("PixCore در حال فکر کردنه…");
-        executor.execute(() -> {
-            String answer;
-            try { answer=callApi(token); }
-            catch(Exception e){answer="خطا در ارتباط با PixAI: "+(e.getMessage()==null?"اتصال ناموفق":e.getMessage());}
-            final String result=answer;
-            runOnUiThread(() -> {
-                addBubble(result,false);
-                try { history.add(new JSONObject().put("role","assistant").put("content",result)); } catch(Exception ignored) {}
-                while(history.size()>40) history.remove(0);
-                saveHistory(); busy=false; send.setEnabled(true); status.setText("آماده‌ام.");
-            });
-        });
-    }
-    private String callApi(String token) throws Exception {
-        HttpURLConnection c=(HttpURLConnection)new URL(API_URL+"/v1/chat/completions").openConnection();
-        c.setRequestMethod("POST"); c.setConnectTimeout(20000); c.setReadTimeout(90000); c.setDoOutput(true);
-        c.setRequestProperty("Content-Type","application/json"); c.setRequestProperty("Authorization","Bearer "+token);
-        JSONArray msgs=new JSONArray(); msgs.put(new JSONObject().put("role","system").put("content",SYSTEM));
-        int start=Math.max(0,history.size()-16); for(int i=start;i<history.size();i++) msgs.put(history.get(i));
-        JSONObject body=new JSONObject().put("model","auto").put("client_id",clientId).put("reasoning_level",reasoningLevel).put("messages",msgs).put("max_tokens",1200);
-        try(OutputStream out=c.getOutputStream()){out.write(body.toString().getBytes("UTF-8"));}
-        int code=c.getResponseCode(); InputStream stream=code>=200&&code<300?c.getInputStream():c.getErrorStream();
-        StringBuilder raw=new StringBuilder(); try(BufferedReader br=new BufferedReader(new InputStreamReader(stream,"UTF-8"))){String line;while((line=br.readLine())!=null)raw.append(line);}
-        c.disconnect();
-        JSONObject data=new JSONObject(raw.toString());
-        if(code<200||code>=300) throw new Exception(data.optString("detail",data.optString("error","HTTP "+code)));
-        JSONArray choices=data.optJSONArray("choices"); if(choices==null||choices.length()==0) throw new Exception("پاسخ معتبری از سرور دریافت نشد.");
-        return choices.getJSONObject(0).getJSONObject("message").optString("content","پاسخ خالی بود.");
-    }
-    private void showSettings() {
-        LinearLayout box=new LinearLayout(this); box.setPadding(dp(20),dp(8),dp(20),dp(4)); box.setOrientation(LinearLayout.VERTICAL);
-        TextView info=label("برای اتصال امن، توکن خصوصی Worker خودت رو اینجا وارد کن. توکن داخل APK یا مخزن قرار نمی‌گیره و فقط در حافظه خصوصی همین برنامه ذخیره می‌شه.",13,Color.DKGRAY,false);
-        box.addView(info);
-        EditText token=new EditText(this); token.setSingleLine(true); token.setHint("API Token"); token.setInputType(129);
-        token.setText(getPreferences(0).getString("api_token","")); box.addView(token);
-        TextView level=label("اندازه استدلال: "+reasoningLevel,14,Color.DKGRAY,true); box.addView(level);
-        SeekBar seek=new SeekBar(this); seek.setMax(2); seek.setProgress(reasoningLevel-1); box.addView(seek);
-        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-            public void onProgressChanged(SeekBar b,int p,boolean u){level.setText("اندازه استدلال: "+(p+1));}
-            public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
-        });
-        new AlertDialog.Builder(this).setTitle("تنظیمات PixAI").setView(box)
-            .setPositiveButton("ذخیره", (d,w)->{
-                String t=token.getText().toString().trim();
-                getPreferences(0).edit().putString("api_token",t).putInt("reasoning",seek.getProgress()+1).apply();
-                reasoningLevel=seek.getProgress()+1; status.setText(t.isEmpty()?"توکن تنظیم نشده":"اتصال آماده است");
-                Toast.makeText(this,"تنظیمات ذخیره شد",Toast.LENGTH_SHORT).show();
-            }).setNegativeButton("انصراف",null).show();
-    }
-    @Override protected void onDestroy(){executor.shutdownNow();super.onDestroy();}
+ private static final String API="https://aipix-api.kourosh-1396-72.workers.dev",SYSTEM="تو PixAI هستی، دستیار فارسی‌زبان PixCore 1. به فارسی روان و دقیق پاسخ بده. از تاریخچه گفتگو استفاده کن. درباره قابلیت‌هایی که سرویسشان در دسترس نیست ادعای موفقیت نکن.";
+ private final ExecutorService worker=Executors.newSingleThreadExecutor();private final ArrayList<JSONObject> history=new ArrayList<>();private LinearLayout root,body,messages;private ScrollView chatScroll;private EditText prompt;private TextView status,pageTitle;private String token="",clientId="";private int reasoning=2;private boolean busy=false;private String currentPage="chat";private PixCanvasView canvasView;private JSONObject lastScene;private String pendingText="";
+ @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(0xff0d111f);getWindow().setNavigationBarColor(0xff0d111f);token=getPreferences(0).getString("api_token","");clientId=getPreferences(0).getString("client_id",UUID.randomUUID().toString());reasoning=getPreferences(0).getInt("reasoning",2);getPreferences(0).edit().putString("client_id",clientId).apply();buildShell();showPage("chat");restoreHistory();if(token.isEmpty())showSettings();}
+ private int dp(float v){return(int)(v*getResources().getDisplayMetrics().density+.5f);}private GradientDrawable shape(int c,int r){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));return d;}
+ private TextView label(String s,int z,int c,boolean b){TextView t=new TextView(this);t.setText(s);t.setTextSize(z);t.setTextColor(c);if(b)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t;}
+ private Button button(String s){Button b=new Button(this);b.setText(s);b.setTextColor(-1);b.setAllCaps(false);b.setTextSize(12);b.setBackground(shape(0xff424b70,14));return b;}
+ private void buildShell(){root=new LinearLayout(this);root.setOrientation(1);root.setBackgroundColor(0xff0d111f);setContentView(root);LinearLayout h=new LinearLayout(this);h.setGravity(Gravity.CENTER_VERTICAL);h.setPadding(dp(16),dp(12),dp(12),dp(12));h.setBackgroundColor(0xff161c30);LinearLayout names=new LinearLayout(this);names.setOrientation(1);names.addView(label("PixAI",22,-1,true));pageTitle=label("PixCore 1",12,0xffaeb9d6,false);names.addView(pageTitle);h.addView(names,new LinearLayout.LayoutParams(0,-2,1));Button gear=button("تنظیمات");gear.setOnClickListener(v->showSettings());h.addView(gear);root.addView(h);body=new LinearLayout(this);body.setOrientation(1);body.setPadding(dp(12),dp(10),dp(12),dp(8));root.addView(body,new LinearLayout.LayoutParams(-1,0,1));status=label("آماده",11,0xffaeb9d6,false);status.setPadding(dp(14),dp(5),dp(14),dp(5));root.addView(status);LinearLayout nav=new LinearLayout(this);nav.setPadding(dp(4),dp(5),dp(4),dp(7));nav.setBackgroundColor(0xff161c30);String[][] items={{"چت","chat"},{"تصویر","image"},{"ویدیو","video"},{"کدنویسی","code"},{"جستجو","search"},{"فایل","files"}};for(String[] it:items){Button b=button(it[0]);b.setTextSize(11);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(46),1);p.setMargins(dp(2),0,dp(2),0);nav.addView(b,p);b.setOnClickListener(v->showPage(it[1]));}root.addView(nav);}
+ private String pageName(String p){switch(p){case"image":return"ImageEngine · موتور تصویر دوبعدی";case"video":return"Motion / Video Engine";case"code":return"PixAI Code";case"search":return"Web Search";case"files":return"مدیریت فایل‌ها";default:return"PixCore 1 · دستیار هوشمند";}}
+ private void showPage(String p){currentPage=p;body.removeAllViews();pageTitle.setText(pageName(p));if(p.equals("chat")||p.equals("search")||p.equals("code"))buildChat(p);else if(p.equals("image")||p.equals("video"))buildStudio(p);else buildFiles();}
+ private void buildChat(String mode){String hint=mode.equals("code")?"درخواست برنامه‌نویسی…":mode.equals("search")?"موضوع جست‌وجو…":"پیامت رو بنویس…";body.addView(label(mode.equals("code")?"اتصال به Qwen نیازمند تنظیم کلید روی سرور است.":mode.equals("search")?"جست‌وجو وابسته به ابزار فعال Worker است.":"گفتگو با PixCore 1 · تاریخچه محلی",12,0xffc3cce2,false));chatScroll=new ScrollView(this);chatScroll.setFillViewport(true);messages=new LinearLayout(this);messages.setOrientation(1);chatScroll.addView(messages);body.addView(chatScroll,new LinearLayout.LayoutParams(-1,0,1));if(mode.equals("chat")){for(JSONObject m:history){String r=m.optString("role");if(r.equals("user")||r.equals("assistant"))bubble(m.optString("content"),r.equals("user"));}}if(messages.getChildCount()==0)bubble(mode.equals("code")?"درخواست ساخت کد را بنویس.":mode.equals("search")?"موضوعی که می‌خواهی جست‌وجو شود را وارد کن.":"سلام! من PixCore 1 هستم.",false);
+ LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);prompt=new EditText(this);prompt.setTextColor(-1);prompt.setHintTextColor(0xff9aa7c4);prompt.setHint(hint);prompt.setTextSize(14);prompt.setPadding(dp(12),dp(9),dp(12),dp(9));prompt.setBackground(shape(0xff252d47,18));prompt.setMaxLines(4);prompt.setImeOptions(EditorInfo.IME_ACTION_SEND);row.addView(prompt,new LinearLayout.LayoutParams(0,-2,1));if(mode.equals("chat")){Button mic=button("🎙");row.addView(mic);mic.setOnClickListener(v->startVoice());}Button send=button(mode.equals("code")?"ساخت کد":"ارسال");row.addView(send);send.setOnClickListener(v->sendChat(mode));prompt.setOnEditorActionListener((v,a,e)->{if(a==EditorInfo.IME_ACTION_SEND){sendChat(mode);return true;}return false;});body.addView(row);}
+ private void bubble(String s,boolean user){TextView t=label(s,14,user?-1:0xffe8ecf8,false);t.setTextIsSelectable(true);t.setPadding(dp(13),dp(11),dp(13),dp(11));t.setBackground(shape(user?0xff5746a8:0xff252e49,16));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(user?dp(290):-1,-2);p.gravity=user?Gravity.RIGHT:Gravity.LEFT;p.bottomMargin=dp(8);messages.addView(t,p);if(chatScroll!=null)chatScroll.post(()->chatScroll.fullScroll(View.FOCUS_DOWN));}
+ private void sendChat(String mode){if(busy)return;String q=prompt.getText().toString().trim();if(q.isEmpty())return;if(token.isEmpty()){showSettings();return;}prompt.setText("");bubble(q,true);if(mode.equals("chat")){try{history.add(new JSONObject().put("role","user").put("content",q));saveHistory();}catch(Exception ignored){}}busy=true;status.setText("در حال پردازش…");worker.execute(()->{String a;try{a=chatRequest(q,mode);}catch(Exception e){a="خطا: "+safe(e);}String result=a;runOnUiThread(()->{bubble(result,false);if(mode.equals("chat")){try{history.add(new JSONObject().put("role","assistant").put("content",result));while(history.size()>40)history.remove(0);saveHistory();}catch(Exception ignored){}}busy=false;status.setText("آماده");});});}
+ private String chatRequest(String q,String mode)throws Exception{JSONArray m=new JSONArray().put(new JSONObject().put("role","system").put("content",SYSTEM+(mode.equals("search")?" اگر جست‌وجو اجرا نشد، اعلام کن.":mode.equals("code")?" کد را با ساختار فایل ارائه کن.":"")));if(mode.equals("chat")){for(int i=Math.max(0,history.size()-16);i<history.size();i++)m.put(history.get(i));}else m.put(new JSONObject().put("role","user").put("content",q));JSONObject d=postJson(mode.equals("code")?"/v1/code/completions":"/v1/chat/completions",new JSONObject().put("model","auto").put("client_id",clientId).put("reasoning_level",reasoning).put("messages",m).put("max_tokens",mode.equals("code")?3500:1400));JSONArray a=d.optJSONArray("choices");if(a==null||a.length()==0)throw new Exception(d.optString("error","پاسخ خالی"));return a.getJSONObject(0).getJSONObject("message").optString("content","پاسخ خالی");}
+ private void buildStudio(String mode){boolean video=mode.equals("video");body.addView(label(video?"ساخت کلیپ شش‌ثانیه‌ای با سرویس ویدیوی سرور.":"توضیح بده؛ PixCore صحنه ساخت‌یافته تولید می‌کند و موتور Canvas بومی آن را رسم می‌کند.",12,0xffc3cce2,false));prompt=new EditText(this);prompt.setTextColor(-1);prompt.setHintTextColor(0xff9aa7c4);prompt.setHint(video?"یک ماشین کارتونی در جاده حرکت کند":"منظره کوهستانی با خانه، درخت، ابر و خورشید");prompt.setMinLines(2);prompt.setMaxLines(4);prompt.setPadding(dp(12),dp(10),dp(12),dp(10));prompt.setBackground(shape(0xff252d47,16));body.addView(prompt);LinearLayout actions=new LinearLayout(this);Button create=button(video?"ساخت ویدیو":"ساخت تصویر"),save=button("ذخیره PNG");actions.addView(create,new LinearLayout.LayoutParams(0,dp(46),1));actions.addView(save,new LinearLayout.LayoutParams(0,dp(46),1));body.addView(actions);FrameLayout stage=new FrameLayout(this);stage.setBackground(shape(0xff202a42,18));canvasView=new PixCanvasView(this);stage.addView(canvasView,new FrameLayout.LayoutParams(-1,-1));LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,0,1);sp.topMargin=dp(10);body.addView(stage,sp);create.setOnClickListener(v->{String q=prompt.getText().toString().trim();if(!q.isEmpty()){if(video)generateVideo(q);else generateImage(q);}});save.setOnClickListener(v->saveCanvas());if(lastScene!=null)canvasView.setScene(lastScene,false);}
+ private void generateImage(String q){if(token.isEmpty()){showSettings();return;}status.setText("در حال طراحی صحنه…");worker.execute(()->{try{String ask="فقط JSON معتبر بده با ساختار {\"background\":\"#hex\",\"objects\":[{\"type\":\"sun|cloud|mountain|tree|house|grass|flower|circle|rect|triangle|text|star|water\",\"x\":0.5,\"y\":0.5,\"width\":0.2,\"height\":0.2,\"color\":\"#hex\",\"text\":\"\"}]}. مختصات و ابعاد بین صفر و یک، حداکثر ۳۵ شیء و چند لایه بساز. درخواست: "+q;JSONArray m=new JSONArray().put(new JSONObject().put("role","system").put("content","طراح صحنه دوبعدی هستی. فقط JSON معتبر بده.")).put(new JSONObject().put("role","user").put("content",ask));JSONObject d=postJson("/v1/chat/completions",new JSONObject().put("model","auto").put("client_id",clientId).put("reasoning_level",reasoning).put("messages",m).put("max_tokens",2200));String raw=d.getJSONArray("choices").getJSONObject(0).getJSONObject("message").optString("content","");int a=raw.indexOf("{"),z=raw.lastIndexOf("}");if(a<0||z<=a)throw new Exception("خروجی JSON صحنه دریافت نشد.");JSONObject scene=new JSONObject(raw.substring(a,z+1));runOnUiThread(()->{lastScene=scene;if(canvasView!=null)canvasView.setScene(scene,false);status.setText("صحنه در موتور Canvas بومی رسم شد.");});}catch(Exception e){runOnUiThread(()->status.setText("ساخت ناموفق: "+safe(e)));}});}
+ private void generateVideo(String q){if(token.isEmpty()){showSettings();return;}status.setText("درخواست ویدیو ارسال شد…");worker.execute(()->{try{JSONObject d=postJson("/v1/videos/generations",new JSONObject().put("prompt",q).put("duration",6).put("resolution","1280x720").put("fps",24).put("generate_audio",false));JSONArray a=d.optJSONArray("data");String url=a!=null&&a.length()>0?a.getJSONObject(0).optString("url",""):d.optString("video_url","");if(!url.startsWith("https://"))throw new Exception(d.optString("error","سرور URL ویدیو نداد؛ ممکن است مدل یا سهمیه تنظیم نباشد."));runOnUiThread(()->new AlertDialog.Builder(this).setTitle("لینک ویدیو دریافت شد").setMessage(url).setPositiveButton("باز کردن",(x,y)->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)))).setNegativeButton("بستن",null).show());}catch(Exception e){runOnUiThread(()->status.setText("VideoEngine: "+safe(e)));}});}
+ private void saveCanvas(){if(canvasView==null||lastScene==null){status.setText("اول تصویر بساز.");return;}Bitmap b=Bitmap.createBitmap(Math.max(1,canvasView.getWidth()),Math.max(1,canvasView.getHeight()),Bitmap.Config.ARGB_8888);canvasView.draw(new Canvas(b));try{String name="PixAI_"+System.currentTimeMillis()+".png";android.content.ContentValues v=new android.content.ContentValues();v.put(MediaStore.Images.Media.DISPLAY_NAME,name);v.put(MediaStore.Images.Media.MIME_TYPE,"image/png");if(android.os.Build.VERSION.SDK_INT>=29)v.put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/PixAI");Uri u=getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,v);try(OutputStream o=getContentResolver().openOutputStream(u)){b.compress(Bitmap.CompressFormat.PNG,100,o);}status.setText("PNG ذخیره شد: "+name);}catch(Exception e){status.setText("ذخیره ناموفق: "+safe(e));}}
+ private void buildFiles(){body.addView(label("انتخاب فایل و ساخت یادداشت متنی با ابزارهای بومی اندروید.",13,0xffc3cce2,false));Button pick=button("انتخاب فایل از دستگاه"),save=button("ساخت فایل متنی");body.addView(pick);body.addView(save);pick.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,210);});save.setOnClickListener(v->{EditText e=new EditText(this);e.setHint("متن فایل");new AlertDialog.Builder(this).setTitle("ساخت فایل").setView(e).setPositiveButton("ادامه",(d,w)->{pendingText=e.getText().toString();Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.setType("text/plain");i.putExtra(Intent.EXTRA_TITLE,"PixAI-Note.txt");startActivityForResult(i,211);}).setNegativeButton("لغو",null).show();});}
+ private void startVoice(){try{Intent i=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);i.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"fa-IR");startActivityForResult(i,212);}catch(Exception e){status.setText("تشخیص گفتار روی دستگاه در دسترس نیست.");}}
+ @Override protected void onActivityResult(int r,int code,Intent data){super.onActivityResult(r,code,data);if(code!=RESULT_OK||data==null)return;try{if(r==212){ArrayList<String>a=data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);if(a!=null&&!a.isEmpty()&&prompt!=null)prompt.setText(a.get(0));}else if(r==210)status.setText("فایل انتخاب شد: "+data.getData().getLastPathSegment());else if(r==211){try(OutputStream o=getContentResolver().openOutputStream(data.getData())){o.write(pendingText.getBytes("UTF-8"));}status.setText("فایل متنی ذخیره شد.");}}catch(Exception e){status.setText("خطای فایل/صوت: "+safe(e));}}
+ private JSONObject postJson(String path,JSONObject payload)throws Exception{HttpURLConnection c=(HttpURLConnection)new URL(API+path).openConnection();c.setRequestMethod("POST");c.setConnectTimeout(25000);c.setReadTimeout(120000);c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Authorization","Bearer "+token);try(OutputStream o=c.getOutputStream()){o.write(payload.toString().getBytes("UTF-8"));}int code=c.getResponseCode();InputStream in=code>=200&&code<300?c.getInputStream():c.getErrorStream();String raw=read(in);c.disconnect();JSONObject d;try{d=new JSONObject(raw);}catch(Exception e){throw new Exception("پاسخ نامعتبر سرور HTTP "+code);}if(code<200||code>=300)throw new Exception(d.optString("detail",d.optString("error","HTTP "+code)));return d;}
+ private String read(InputStream in)throws Exception{StringBuilder s=new StringBuilder();try(BufferedReader r=new BufferedReader(new InputStreamReader(in,"UTF-8"))){String l;while((l=r.readLine())!=null)s.append(l);}return s.toString();}
+ private String safe(Exception e){return e.getMessage()==null?"اتصال ناموفق":e.getMessage();}
+ private void restoreHistory(){try{JSONArray a=new JSONArray(getPreferences(0).getString("history","[]"));for(int i=0;i<a.length();i++)history.add(a.getJSONObject(i));}catch(Exception ignored){}}
+ private void saveHistory(){JSONArray a=new JSONArray();for(JSONObject o:history)a.put(o);getPreferences(0).edit().putString("history",a.toString()).apply();}
+ private void showSettings(){LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(dp(20),dp(6),dp(20),dp(6));box.addView(label("توکن در فضای خصوصی برنامه ذخیره می‌شود و داخل مخزن یا APK قرار نمی‌گیرد.",12,Color.DKGRAY,false));EditText t=new EditText(this);t.setHint("توکن API_TOKEN");t.setSingleLine(true);t.setInputType(129);t.setText(token);box.addView(t);TextView l=label("اندازه استدلال: "+reasoning,14,Color.DKGRAY,true);box.addView(l);SeekBar seek=new SeekBar(this);seek.setMax(2);seek.setProgress(reasoning-1);box.addView(seek);seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar b,int p,boolean u){l.setText("اندازه استدلال: "+(p+1));}public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}});new AlertDialog.Builder(this).setTitle("تنظیمات PixAI").setView(box).setPositiveButton("ذخیره",(d,w)->{token=t.getText().toString().trim();reasoning=seek.getProgress()+1;getPreferences(0).edit().putString("api_token",token).putInt("reasoning",reasoning).apply();status.setText(token.isEmpty()?"توکن تنظیم نشده":"تنظیمات ذخیره شد");}).setNegativeButton("بستن",null).show();}
+ @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
 }
