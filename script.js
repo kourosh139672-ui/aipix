@@ -30,6 +30,8 @@ const welcome = document.getElementById("welcome");
 let history = [];
 let busy = false;
 let codeMode = false;
+let videoMode = false;
+const videoModeButton = document.getElementById('videoMode');
 const codeModeButton = document.getElementById("codeMode");
 function updateCodeMode() {
   if (!codeModeButton) return;
@@ -90,6 +92,7 @@ function setBusy(value) {
 async function sendMessage(text) {
   const clean = text.trim();
   if (!clean || busy) return;
+  if (videoMode) { addMessage('assistant', 'VideoEngine 2D هنوز به مدل تولید ویدیو متصل نشده است. این بخش فعلاً رابط اولیه است و تا اتصال سرویس، ویدیو تولید نمی‌کند.', 'error'); return; }
   const config = getApiConfig();
   if (!config) {
     addMessage("assistant", "اتصال PixAI تنظیم نشد. توکن خصوصی را وارد کن تا ارتباط برقرار شود.", "error");
@@ -158,7 +161,25 @@ promptEl.addEventListener("keydown", event => {
 document.querySelectorAll(".suggestion").forEach(button => {
   button.addEventListener("click", () => sendMessage(button.textContent));
 });
+
+videoModeButton?.addEventListener('click', () => {
+  if (busy) return;
+  videoMode = !videoMode;
+  codeMode = false;
+  history = [];
+  messagesEl.innerHTML = '';
+  const panel = document.createElement('div');
+  panel.className = 'welcome';
+  panel.innerHTML = videoMode ? '<div class="welcome-icon">🎬</div><h1>PixAI VideoEngine 2D</h1><p>ساخت انیمیشن دوبعدی از متن و تصویر</p><p class="video-status">رابط اولیه اضافه شده؛ اتصال مدل ویدیویی هنوز انجام نشده است.</p>' : '<div class="welcome-icon">✦</div><h1>سلام! من PixAI هستم</h1><p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>';
+  messagesEl.appendChild(panel);
+  videoModeButton.classList.toggle('active', videoMode);
+  promptEl.placeholder = videoMode ? 'صحنه انیمیشن دوبعدی رو توصیف کن...' : 'پیامت رو اینجا بنویس...';
+  promptEl.focus();
+});
+
 codeModeButton?.addEventListener("click", () => {
+  videoMode = false;
+  videoModeButton?.classList.remove('active');
   if (busy) return;
   codeMode = !codeMode;
   history = [];
