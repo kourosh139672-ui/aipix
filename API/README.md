@@ -41,3 +41,7 @@ The browser renders an image only when the API returns image data. The assistant
 - The Worker proxies only validated chat messages to Qwen. It does not execute generated code or write to a repository.
 - The frontend exposes a separate Code mode. Code mode is unavailable until both server-side settings are configured.
 - Never put the provider key in browser JavaScript or GitHub.
+
+
+### Multi-file project output
+PixAI Code requests a consistent project tree and emits files using `### FILE: path/to/file.ext` followed by a fenced code block. The frontend extracts these blocks and offers each file as a separate download. Code is not executed automatically.
