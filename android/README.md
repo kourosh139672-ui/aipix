@@ -1,21 +1,20 @@
 # PixAI Android
 
-This is the first Android wrapper for the existing PixAI web app.
+این پروژه یک اپ اندرویدی Native با Java است و رابط اصلی آن WebView یا GitHub Pages نیست.
 
-## Build
-Open the `android` folder in Android Studio, or run:
+## قابلیت‌های نسخه فعلی
+- رابط چت بومی اندروید
+- اتصال مستقیم به Cloudflare Worker پروژه PixAI
+- نگهداری تاریخچه گفتگو در حافظه خصوصی برنامه
+- سه سطح اندازه استدلال
+- تنظیم توکن Worker از داخل تنظیمات برنامه؛ هیچ توکنی در APK یا مخزن قرار نمی‌گیرد.
 
-```bash
-gradle assembleDebug
-```
-
-The debug APK is written to:
+## ساخت
+از پوشه `android` دستور `gradle assembleDebug` اجرا شود. خروجی:
 `app/build/outputs/apk/debug/app-debug.apk`
 
-GitHub Actions also builds the APK when Android files change. Download it from the workflow run's **Artifacts** section.
+## راه‌اندازی
+در اجرای اول، از تنظیمات برنامه توکن خصوصی API_TOKEN مربوط به Worker را وارد کنید. آدرس API در برنامه به Worker پروژه متصل است.
 
-## Important
-The app currently loads the hosted web client at:
-`https://kourosh139672-ui.github.io/aipix/`
-
-GitHub Pages must be enabled for this repository (deploy the repository root from the `main` branch). The APK is a WebView shell, not a fully offline native rewrite. PixAI's existing Cloudflare Worker remains the backend. Music UI can be shown, but actual music generation still depends on configuring its provider credential on the server; never place that credential in this Android app or the public repository.
+## محدوده نسخه
+این نسخه نخستین پوسته Native چت است. اتصال Native به موتورهای تصویر، ویدئو، موسیقی، انتخاب فایل و ورودی صوتی هنوز پیاده‌سازی نشده و نباید به‌عنوان قابلیت آماده معرفی شود. سرویس‌های مدل همچنان برای پردازش به اینترنت نیاز دارند.
