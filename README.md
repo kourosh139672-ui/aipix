@@ -33,5 +33,5 @@ The repository now includes a provider-neutral ImageEngine gateway in `ImageEngi
 Run its tests with:
 
 ```bash
-python -m unittest tests.test_image_engine
+python -m unittest discover -s tests
 ```
