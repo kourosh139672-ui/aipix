@@ -60,3 +60,8 @@ A separate Code mode has been added to the frontend. It calls `POST /v1/code/com
 
 ### Project file export
 PixAI Code supports multi-file project responses. It recognizes `### FILE: path/to/file.ext` sections and provides individual file downloads in the browser. This is a client-side export feature; it does not execute code or write to GitHub.
+
+
+## PixAI VideoEngine 2D
+
+The frontend now includes a separate entry point for the planned 2D video engine. This is an interface scaffold only: it does not generate videos yet. A compatible video-generation model/provider, server-side API route, job handling, and video playback/download support still need to be implemented. The interface explicitly reports that generation is not connected rather than pretending a video was created.
