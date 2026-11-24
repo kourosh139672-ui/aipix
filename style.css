@@ -16,3 +16,10 @@
 .video-mode{border:1px solid #dce7ff;background:#fff;color:#4264b5;border-radius:12px;padding:11px 12px;font:600 12px Vazirmatn,Tahoma,sans-serif;cursor:pointer;text-align:right}.video-mode.active{background:#edf3ff;border-color:#8eabf5;color:#284b9d}.video-status{font-size:12px!important;color:#8a6a2d!important;background:#fff9e9;border-radius:10px;padding:10px;margin:14px auto!important;max-width:420px}
 
 .video-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:420px;margin:14px auto;text-align:right}.video-controls label{font-size:12px;color:#716b83;align-self:center}.video-controls select,.video-controls input{min-width:0;width:100%;font:12px Vazirmatn,Tahoma,sans-serif;border:1px solid #e5e1ef;border-radius:9px;padding:9px;background:#fff;color:#332d48}.video-controls input{grid-column:1/-1}.video-result{display:flex;flex-direction:column;gap:10px}.video-result video{width:min(100%,640px);max-height:65vh;border-radius:12px;background:#111}.video-result a{color:#6042df;font-size:13px}
+
+.music-mode{border:1px solid #e8e2f7;background:#fff;color:#66548f;border-radius:11px;padding:11px 12px;font:600 13px Vazirmatn,Tahoma,sans-serif;cursor:pointer;text-align:right}
+.music-mode.active{background:#fff3fb;border-color:#df9bc8;color:#963c7b}
+.music-status{font-size:12px!important;color:#80658a!important;background:#fff6fc;border-radius:10px;padding:10px;margin:12px auto!important;max-width:420px}
+.music-result{display:flex;flex-direction:column;gap:10px}
+.music-result audio{width:min(100%,520px)}
+.music-result a{color:#6042df;font-size:13px}
