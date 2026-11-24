@@ -39,6 +39,29 @@ function updateCodeMode() {
   if (heading) heading.textContent = codeMode ? "PixAI Code" : "گفت‌وگوی جدید";
 }
 
+
+function renderProjectFiles(messageEl, content) {
+  const pattern = /###\\s*FILE:\\s*([^\\n]+)\\n\\s*```[^\\n]*\\n([\\s\\S]*?)\\n```/g;
+  const found = [...content.matchAll(pattern)];
+  if (!found.length) return;
+  const panel = document.createElement("div");
+  panel.className = "project-files";
+  const title = document.createElement("strong");
+  title.textContent = "فایل‌های پروژه";
+  panel.appendChild(title);
+  found.forEach((match, index) => {
+    const path = match[1].trim().replace(/^\\/+/, "").replace(/\\.\\./g, "").replace(/[^\\p{L}\\p{N}._/-]/gu, "_");
+    if (!path || path.endsWith("/")) return;
+    const url = URL.createObjectURL(new Blob([match[2]], { type: "text/plain;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = path.split("/").pop() || ("project-file-" + (index + 1) + ".txt");
+    link.textContent = "⬇ " + path;
+    link.addEventListener("click", () => setTimeout(() => URL.revokeObjectURL(url), 60000), { once: true });
+    panel.appendChild(link);
+  });
+  if (panel.children.length > 1) messageEl.appendChild(panel);
+}
 function addMessage(role, content, extra = "", imageData = null) {
   const el = document.createElement("div");
   el.className = "message " + role + (extra ? " " + extra : "");
