@@ -31,8 +31,6 @@ let history = [];
 let busy = false;
 let codeMode = false;
 let videoMode = false;
-let musicMode = false;
-const musicModeButton = document.getElementById("musicMode");
 const videoModeButton = document.getElementById('videoMode');
 const codeModeButton = document.getElementById("codeMode");
 function updateCodeMode() {
@@ -40,7 +38,7 @@ function updateCodeMode() {
   codeModeButton.textContent = codeMode ? "⌘ حالت برنامه‌نویسی: روشن" : "⌘ حالت برنامه‌نویسی: خاموش";
   codeModeButton.classList.toggle("active", codeMode);
   const heading = document.querySelector(".topbar strong");
-  if (heading) heading.textContent = musicMode ? "PixAI MusicEngine" : videoMode ? "PixAI VideoEngine 2D" : codeMode ? "PixAI Code" : "گفت‌وگوی جدید";
+  if (heading) heading.textContent = videoMode ? "PixAI VideoEngine 2D" : codeMode ? "PixAI Code" : "گفت‌وگوی جدید";
 }
 
 
@@ -93,52 +91,6 @@ function setBusy(value) {
 }
 
 
-async function generateMusic(prompt) {
-  if (busy) return;
-  const config = getApiConfig();
-  if (!config) return;
-  addMessage("user", prompt);
-  promptEl.value = "";
-  promptEl.style.height = "auto";
-  setBusy(true);
-  const status = addMessage("typing", "در حال ساخت موسیقی…");
-  try {
-    const response = await fetch(config.url + "/v1/music/generations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + config.token },
-      body: JSON.stringify({ prompt, duration: 30 })
-    });
-    if (!response.ok) {
-      const detail = await response.json().catch(() => ({}));
-      throw new Error(detail.detail || detail.error || "خطای سرویس موسیقی: " + response.status);
-    }
-    const blob = await response.blob();
-    if (!blob.size || !blob.type.startsWith("audio/")) throw new Error("فایل صوتی معتبر دریافت نشد.");
-    const audioUrl = URL.createObjectURL(blob);
-    status.remove();
-    const card = document.createElement("div");
-    card.className = "message assistant music-result";
-    const title = document.createElement("strong");
-    title.textContent = "موسیقی PixAI آماده است";
-    const audio = document.createElement("audio");
-    audio.controls = true;
-    audio.src = audioUrl;
-    const link = document.createElement("a");
-    link.href = audioUrl;
-    link.download = "pixai-music.mp3";
-    link.textContent = "دانلود موسیقی";
-    card.append(title, audio, link);
-    messagesEl.appendChild(card);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  } catch (error) {
-    status.remove();
-    addMessage("assistant", String(error.message || error), "error");
-  } finally {
-    setBusy(false);
-    promptEl.focus();
-  }
-}
-
 async function generateVideo(prompt) {
   if (busy) return;
   const config = getApiConfig();
@@ -174,7 +126,6 @@ async function generateVideo(prompt) {
 async function sendMessage(text) {
   const clean = text.trim();
   if (!clean || busy) return;
-  if (musicMode) { generateMusic(clean); return; }
   if (videoMode) { addMessage('assistant', 'VideoEngine 2D هنوز به مدل تولید ویدیو متصل نشده است. این بخش فعلاً رابط اولیه است و تا اتصال سرویس، ویدیو تولید نمی‌کند.', 'error'); return; }
   const config = getApiConfig();
   if (!config) {
@@ -214,6 +165,18 @@ async function sendMessage(text) {
     history.push({ role: "assistant", content: answer });
     const imageData = data?.images?.[0]?.b64_json || null;
     addMessage("assistant", answer, "", imageData);
+    const audioData = data?.audio?.b64_json || null;
+    if (audioData) {
+      const binary = atob(audioData);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const audioUrl = URL.createObjectURL(new Blob([bytes], { type: data.audio.mime_type || "audio/mpeg" }));
+      const card = document.createElement("div"); card.className = "message assistant music-result";
+      const title = document.createElement("strong"); title.textContent = "موسیقی PixAI آماده است";
+      const player = document.createElement("audio"); player.controls = true; player.src = audioUrl;
+      const download = document.createElement("a"); download.href = audioUrl; download.download = "pixai-music.mp3"; download.textContent = "دانلود موسیقی";
+      card.append(title, player, download); messagesEl.appendChild(card); messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
   } catch (err) {
     typing.remove();
     const msg = String(err?.message || err);
@@ -248,8 +211,6 @@ document.querySelectorAll(".suggestion").forEach(button => {
 videoModeButton?.addEventListener('click', () => {
   if (busy) return;
   videoMode = !videoMode;
-  musicMode = false;
-  musicModeButton?.classList.remove('active');
   codeMode = false;
   history = [];
   messagesEl.innerHTML = '';
@@ -264,32 +225,8 @@ videoModeButton?.addEventListener('click', () => {
 });
 
 
-musicModeButton?.addEventListener("click", () => {
-  if (busy) return;
-  musicMode = !musicMode;
-  videoMode = false;
-  codeMode = false;
-  videoModeButton?.classList.remove("active");
-  codeModeButton?.classList.remove("active");
-  history = [];
-  messagesEl.innerHTML = "";
-  const panel = document.createElement("div");
-  panel.className = "welcome";
-  panel.innerHTML = musicMode
-    ? '<div class="welcome-icon">🎵</div><h1>PixAI MusicEngine</h1><p>موسیقی بی‌کلام و افکت صوتی را با توضیح متنی بساز.</p><p class="music-status">Stable Audio 2.5 · هر تولید ۲۰ اعتبار مصرف می‌کند.</p>'
-    : '<div class="welcome-icon">✦</div><h1>سلام! من PixAI هستم</h1><p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>';
-  messagesEl.appendChild(panel);
-  musicModeButton.classList.toggle("active", musicMode);
-  promptEl.placeholder = musicMode ? "موسیقی موردنظرت رو توصیف کن..." : "پیامت رو اینجا بنویس...";
-  const heading = document.querySelector(".topbar strong");
-  if (heading) heading.textContent = musicMode ? "PixAI MusicEngine" : "گفت‌وگوی جدید";
-  promptEl.focus();
-});
-
 codeModeButton?.addEventListener("click", () => {
   videoMode = false;
-  musicMode = false;
-  musicModeButton?.classList.remove('active');
   videoModeButton?.classList.remove('active');
   if (busy) return;
   codeMode = !codeMode;
@@ -307,8 +244,6 @@ codeModeButton?.addEventListener("click", () => {
 document.getElementById("newChat").addEventListener("click", () => {
   if (busy) return;
   videoMode = false;
-  musicMode = false;
-  musicModeButton?.classList.remove("active");
   videoModeButton?.classList.remove("active");
   promptEl.placeholder = "پیامت رو اینجا بنویس...";
   history = [];
