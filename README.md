@@ -21,7 +21,7 @@ PixAI Core handles conversation and intent interpretation. ImageEngine performs 
 
 ## Google Colab prototype
 
-Open the [PixAI API Colab notebook](colab/PixAI_API_Colab.ipynb) to run the conversational prototype. It supports a system persona and optional persistent chat history in the user's own Google Drive. The notebook also includes a provider-neutral ImageEngine HTTP adapter. Image generation stays disabled until a real compatible endpoint (and optional token) is configured; no provider credentials are committed to this repository.
+Open the [PixAI API Colab notebook](colab/PixAI_API_Colab.ipynb) to run the conversational prototype. It supports a system persona and optional persistent chat history in the user's own Google Drive. The notebook also includes a provider-neutral ImageEngine HTTP adapter. The Colab ImageEngine notebook provides the image-generation endpoint; no provider credentials are committed to this repository.
 
 This is an experimental notebook, not a continuously hosted public API. Colab runtime availability and GPU access are not guaranteed.
 
