@@ -1,3 +1,8 @@
 # Install a PyTorch build matching the machine's CUDA version first:
 # https://pytorch.org/get-started/locally/
 ms-swift
+
+fastapi>=0.110
+uvicorn[standard]>=0.27
+httpx>=0.27
+pydantic>=2.6
