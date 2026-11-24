@@ -1,25 +1,23 @@
-const DEFAULT_API_URL = "";
+const DEFAULT_API_URL = "https://aipix-api.kourosh-1396-72.workers.dev";
 function getApiConfig() {
-  let url = sessionStorage.getItem("pixai_api_url") || "";
+  const url = (sessionStorage.getItem("pixai_api_url") || DEFAULT_API_URL).replace(/\/$/, "");
   let token = sessionStorage.getItem("pixai_api_token") || "";
-  if (!url) {
-    url = (window.prompt("آدرس API را از خروجی دفترچه Colab کپی کن:") || "").trim();
-    if (!url) return null;
-    token = (window.prompt("کلید دسترسی PixAI را از خروجی Colab وارد کن:") || "").trim();
+  if (!token) {
+    token = (window.prompt("توکن خصوصی AIPix را وارد کن:") || "").trim();
     if (!token) return null;
-    sessionStorage.setItem("pixai_api_url", url.replace(/\\/$/, ""));
     sessionStorage.setItem("pixai_api_token", token);
   }
-  return { url: url.replace(/\\/$/, ""), token };
+  return { url, token };
 }
 const SYSTEM_PROMPT = `تو PixAI هستی، دستیار هوش مصنوعی فارسی‌زبان پروژه AIPix.
 - به زبان کاربر پاسخ بده؛ فارسی را روان، خودمانی و روشن بنویس.
 - پاسخ را متناسب با سؤال، دقیق و تا حد لازم کوتاه نگه دار.
-- اگر کاربر پرسید کی هستی، بگو دستیار هوش مصنوعی پروژه AIPix هستی.
+- اگر کاربر درخواست ساخت، کشیدن یا تولید تصویر کرد، از ابزار generate_image استفاده کن. توضیح تصویر را دقیق و کامل به prompt ابزار تبدیل کن.
+- فقط وقتی ابزار تصویر با موفقیت اجرا شد بگو تصویر ساخته شده است. اگر ابزار خطا داد، صادقانه خطا را توضیح بده.
+- برای سؤال‌های عادی، گفتگو و پاسخ متنی داشته باش و بی‌دلیل ابزار تصویر را اجرا نکن.
+- از قابلیت‌هایی که ابزارشان در دسترس نیست ادعای استفاده نکن.
 - اگر درباره مدل پایه یا سازنده‌ات پرسیدند، چیزی را جعل نکن؛ فقط اطلاعاتی را بگو که واقعاً در اختیارت است.
 - اگر پاسخ را نمی‌دانی، صادقانه بگو و حدس را به‌عنوان واقعیت ارائه نکن.
-- ادعا نکن به اینترنت، فایل‌ها، ابزارها یا سرویس ساخت تصویر وصل هستی مگر واقعاً از طریق ابزار فعال به آن دسترسی داشته باشی.
-- اگر کاربر ساخت تصویر خواست و ابزار تصویر فعال نیست، شفاف بگو که در این نسخه ابزار تصویر متصل نیست.
 - رمز، کد ورود یا اطلاعات محرمانه درخواست نکن.
 - در موضوعات پزشکی، ایمنی و موضوعات حساس با احتیاط پاسخ بده؛ برای خطر فوری، کمک گرفتن از یک بزرگسال قابل اعتماد یا خدمات اضطراری را توصیه کن.
 - محترمانه، صبور و مفید باش؛ توهین و تحقیر نکن.`;
@@ -32,10 +30,21 @@ const welcome = document.getElementById("welcome");
 let history = [];
 let busy = false;
 
-function addMessage(role, content, extra = "") {
+function addMessage(role, content, extra = "", imageData = null) {
   const el = document.createElement("div");
   el.className = "message " + role + (extra ? " " + extra : "");
   el.textContent = content;
+  if (imageData) {
+    const image = document.createElement("img");
+    image.className = "generated-image";
+    image.alt = "تصویر ساخته‌شده توسط PixAI";
+    image.src = imageData.startsWith("data:image/")
+      ? imageData
+      : "data:image/png;base64," + imageData;
+    image.loading = "lazy";
+    el.appendChild(document.createElement("br"));
+    el.appendChild(image);
+  }
   messagesEl.appendChild(el);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return el;
@@ -50,7 +59,7 @@ async function sendMessage(text) {
   if (!clean || busy) return;
   const config = getApiConfig();
   if (!config) {
-    addMessage("assistant", "اتصال PixAI تنظیم نشد. ابتدا دفترچه API را در Colab اجرا کن و آدرس و کلید را وارد کن.", "error");
+    addMessage("assistant", "اتصال PixAI تنظیم نشد. توکن خصوصی را وارد کن تا ارتباط برقرار شود.", "error");
     return;
   }
   if (welcome?.isConnected) welcome.remove();
@@ -61,31 +70,35 @@ async function sendMessage(text) {
   setBusy(true);
   const typing = addMessage("typing", "PixAI در حال فکر کردنه…");
   try {
-    const response = await fetch(config.url.endsWith("/v1/chat/completions") ? config.url : config.url + "/v1/chat/completions", {
+    const response = await fetch(config.url + "/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + config.token },
       body: JSON.stringify({
         model: "auto",
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history]
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
+        max_tokens: 768
       })
     });
     const data = await response.json().catch(() => ({}));
     typing.remove();
     if (!response.ok) {
-      const detail = data?.error?.message || data?.error?.type || "";
-      throw new Error(response.status === 429
-        ? "سهمیه ساعتی سرویس فعلاً تمام شده؛ کمی بعد دوباره امتحان کن."
-        : "سرویس پاسخ نداد (HTTP " + response.status + "). " + detail);
+      const detail = data?.detail || data?.error?.message || data?.error || "";
+      throw new Error(response.status === 401
+        ? "توکن اتصال درست نیست. صفحه را تازه کن و توکن را دوباره وارد کن."
+        : response.status === 429
+          ? "سهمیه سرویس فعلاً تمام شده؛ بعداً دوباره امتحان کن."
+          : "سرویس پاسخ نداد (HTTP " + response.status + "). " + detail);
     }
     const answer = data?.choices?.[0]?.message?.content;
     if (typeof answer !== "string" || !answer.trim()) throw new Error("پاسخ سرویس خالی بود.");
     history.push({ role: "assistant", content: answer });
-    addMessage("assistant", answer);
+    const imageData = data?.images?.[0]?.b64_json || null;
+    addMessage("assistant", answer, "", imageData);
   } catch (err) {
     typing.remove();
     const msg = String(err?.message || err);
     const corsHint = /failed to fetch|networkerror|load failed/i.test(msg)
-      ? " ممکن است مرورگر اتصال مستقیم را به‌خاطر CORS مسدود کرده باشد؛ در این صورت GitHub Pages به‌تنهایی کافی نیست."
+      ? " اتصال شبکه یا تنظیمات CORS را بررسی کن."
       : "";
     addMessage("assistant", msg + corsHint, "error");
     history.pop();
