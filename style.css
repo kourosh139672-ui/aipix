@@ -35,3 +35,5 @@
 .settings-panel label{font-size:12px;font-weight:700;color:#5e4ba4}
 .settings-panel select{width:100%;font:12px Vazirmatn,Tahoma,sans-serif;border:1px solid #e5e1ef;border-radius:9px;padding:9px;background:#fff;color:#332d48}
 .settings-panel p{font-size:10px;line-height:1.8;color:#898397;margin:0}
+
+.motion-result{width:min(100%,760px);gap:12px}.motion-stage{width:100%;overflow:hidden;border-radius:12px;background:#dbeafe}.motion-canvas{display:block;width:100%;height:auto;aspect-ratio:16/9}.motion-actions{display:flex;flex-wrap:wrap;gap:8px}.motion-actions button{border:1px solid #ded7f1;background:#fff;color:#5841a7;border-radius:9px;padding:9px 13px;font:600 12px Vazirmatn,Tahoma,sans-serif;cursor:pointer}.motion-actions button:disabled{opacity:.55;cursor:wait}.motion-result small{color:#8b8499;font-size:11px}
