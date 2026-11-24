@@ -38,7 +38,7 @@ function updateCodeMode() {
   codeModeButton.textContent = codeMode ? "⌘ حالت برنامه‌نویسی: روشن" : "⌘ حالت برنامه‌نویسی: خاموش";
   codeModeButton.classList.toggle("active", codeMode);
   const heading = document.querySelector(".topbar strong");
-  if (heading) heading.textContent = codeMode ? "PixAI Code" : "گفت‌وگوی جدید";
+  if (heading) heading.textContent = videoMode ? "PixAI VideoEngine 2D" : codeMode ? "PixAI Code" : "گفت‌وگوی جدید";
 }
 
 
@@ -206,6 +206,7 @@ videoModeButton?.addEventListener('click', () => {
   panel.innerHTML = videoMode ? '<div class="welcome-icon">🎬</div><h1>PixAI VideoEngine 2D</h1><p>تبدیل متن یا تصویر به انیمیشن دوبعدی</p><div class="video-controls"><label for="videoStyle">سبک</label><select id="videoStyle"><option value="2d">انیمیشن دوبعدی</option><option value="anime">انیمه دوبعدی</option><option value="cartoon">کارتونی</option></select><label for="videoImageUrl">لینک تصویر (اختیاری)</label><input id="videoImageUrl" type="url" placeholder="https://..."></div><p class="video-status">مدل LTX-2.3 Fast؛ هزینه مصرف Cloudflare اعمال می‌شود.</p>' : '<div class="welcome-icon">✦</div><h1>سلام! من PixAI هستم</h1><p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>';
   messagesEl.appendChild(panel);
   videoModeButton.classList.toggle('active', videoMode);
+  codeModeButton?.classList.toggle("active", codeMode);
   promptEl.placeholder = videoMode ? 'صحنه انیمیشن دوبعدی رو توصیف کن...' : 'پیامت رو اینجا بنویس...';
   promptEl.focus();
 });
