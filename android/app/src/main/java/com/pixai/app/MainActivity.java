@@ -4,6 +4,9 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.BitmapFactory;
+import android.media.MediaPlayer;
+import android.util.Base64;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -18,6 +21,8 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -37,6 +42,8 @@ public class MainActivity extends Activity {
     private EditText composer;
     private TextView sendButton;
     private boolean busy = false;
+    private MediaPlayer audioPlayer;
+    private static class ChatResult { String text; String imagePath; String audioPath; }
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -194,12 +201,17 @@ public class MainActivity extends Activity {
         for (JSONObject item : history) {
             String role = item.optString("role");
             if ("user".equals(role)) addMessage(item.optString("content"), true);
-            else if ("assistant".equals(role)) addMessage(item.optString("content"), false);
+            else if ("assistant".equals(role)) addMessage(item.optString("content"), false,
+                    item.optString("image_path", null), item.optString("audio_path", null));
         }
         scroll.post(() -> scroll.fullScroll(ScrollView.FOCUS_DOWN));
     }
 
     private void addMessage(String value, boolean fromUser) {
+        addMessage(value, fromUser, null, null);
+    }
+
+    private void addMessage(String value, boolean fromUser, String imagePath, String audioPath) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(fromUser ? Gravity.RIGHT : Gravity.LEFT);
@@ -221,6 +233,55 @@ public class MainActivity extends Activity {
             row.addView(content, new LinearLayout.LayoutParams(0, -2, 1));
         }
         messageList.addView(row, new LinearLayout.LayoutParams(-1, -2));
+        if (!fromUser && imagePath != null) {
+            try {
+                android.graphics.Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+                if (bitmap != null) {
+                    ImageView image = new ImageView(this);
+                    image.setImageBitmap(bitmap);
+                    image.setAdjustViewBounds(true);
+                    image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(-1, dp(280));
+                    ip.leftMargin = dp(35);
+                    ip.bottomMargin = dp(8);
+                    messageList.addView(image, ip);
+                }
+            } catch (Exception ignored) {}
+        }
+        if (!fromUser && audioPath != null) {
+            TextView play = text("▶  پخش موسیقی ساخته‌شده", 13, Color.WHITE, true);
+            play.setGravity(Gravity.CENTER);
+            play.setPadding(dp(14), dp(10), dp(14), dp(10));
+            play.setBackground(rounded(0xff3b3b3b, 18));
+            LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-2, -2);
+            ap.leftMargin = dp(35);
+            ap.bottomMargin = dp(8);
+            messageList.addView(play, ap);
+            play.setOnClickListener(v -> playAudio(audioPath));
+        }
+    }
+
+    private void playAudio(String path) {
+        try {
+            if (audioPlayer != null) { audioPlayer.release(); audioPlayer = null; }
+            audioPlayer = new MediaPlayer();
+            audioPlayer.setDataSource(path);
+            audioPlayer.setOnPreparedListener(player -> player.start());
+            audioPlayer.setOnCompletionListener(player -> {
+                player.release();
+                if (audioPlayer == player) audioPlayer = null;
+            });
+            audioPlayer.prepareAsync();
+        } catch (Exception e) {
+            Toast.makeText(this, "پخش فایل صوتی ممکن نشد.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String saveBase64(String encoded, String extension) throws Exception {
+        byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
+        File file = new File(getFilesDir(), "pixai-" + UUID.randomUUID() + extension);
+        try (FileOutputStream out = new FileOutputStream(file)) { out.write(bytes); }
+        return file.getAbsolutePath();
     }
 
     private void sendMessage() {
@@ -242,15 +303,21 @@ public class MainActivity extends Activity {
         busy = true;
         sendButton.setText("…");
         executor.execute(() -> {
-            String answer;
+            ChatResult answer;
             try { answer = requestChat(question); }
-            catch (Exception e) { answer = "اتصال به سرویس برقرار نشد. لطفاً کمی بعد دوباره تلاش کن.\n" + safe(e); }
-            final String result = answer;
+            catch (Exception e) {
+                answer = new ChatResult();
+                answer.text = "اتصال به سرویس برقرار نشد. لطفاً کمی بعد دوباره تلاش کن.\n" + safe(e);
+            }
+            final ChatResult result = answer;
             runOnUiThread(() -> {
                 messageList.removeView(typing);
-                addMessage(result, false);
+                addMessage(result.text, false, result.imagePath, result.audioPath);
                 try {
-                    history.add(new JSONObject().put("role", "assistant").put("content", result));
+                    JSONObject saved = new JSONObject().put("role", "assistant").put("content", result.text);
+                    if (result.imagePath != null) saved.put("image_path", result.imagePath);
+                    if (result.audioPath != null) saved.put("audio_path", result.audioPath);
+                    history.add(saved);
                     while (history.size() > 60) history.remove(0);
                     saveHistory();
                 } catch (Exception ignored) {}
@@ -261,7 +328,7 @@ public class MainActivity extends Activity {
         });
     }
 
-    private String requestChat(String question) throws Exception {
+    private ChatResult requestChat(String question) throws Exception {
         JSONArray messages = new JSONArray();
         messages.put(new JSONObject().put("role", "system").put("content", SYSTEM));
         int start = Math.max(0, history.size() - 24);
@@ -292,9 +359,20 @@ public class MainActivity extends Activity {
         JSONArray choices = response.optJSONArray("choices");
         if (choices == null || choices.length() == 0) throw new Exception(response.optString("error", "پاسخ خالی از سرور"));
         JSONObject message = choices.getJSONObject(0).optJSONObject("message");
-        String content = message == null ? "" : message.optString("content", "");
-        if (content.isEmpty()) content = "پاسخ متنی دریافت نشد.";
-        return content;
+        ChatResult result = new ChatResult();
+        result.text = message == null ? "" : message.optString("content", "");
+        if (result.text.isEmpty()) result.text = "پاسخ متنی دریافت نشد.";
+        JSONArray images = response.optJSONArray("images");
+        if (images != null && images.length() > 0) {
+            String encoded = images.getJSONObject(0).optString("b64_json", "");
+            if (!encoded.isEmpty()) result.imagePath = saveBase64(encoded, ".png");
+        }
+        JSONObject audio = response.optJSONObject("audio");
+        if (audio != null) {
+            String encoded = audio.optString("b64_json", "");
+            if (!encoded.isEmpty()) result.audioPath = saveBase64(encoded, ".mp3");
+        }
+        return result;
     }
 
     private String read(InputStream stream) throws Exception {
@@ -361,6 +439,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         executor.shutdownNow();
+        if (audioPlayer != null) { audioPlayer.release(); audioPlayer = null; }
         super.onDestroy();
     }
 }
