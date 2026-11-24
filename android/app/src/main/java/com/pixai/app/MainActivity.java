@@ -305,6 +305,16 @@ public class MainActivity extends Activity {
         return mentionsVideo && asksToCreate;
     }
 
+    private boolean isImageGenerationRequest(String question) {
+        String q = question.toLowerCase();
+        boolean mentionsImage = q.contains("عکس") || q.contains("تصویر") || q.contains("image") || q.contains("picture");
+        boolean asksToCreate = q.contains("بساز") || q.contains("بسازش") || q.contains("تولید کن")
+                || q.contains("ایجاد کن") || q.contains("درست کن") || q.contains("خلق کن")
+                || q.contains("طراحی کن") || q.contains("تصویرسازی") || q.contains("نقاشی کن")
+                || q.contains("generate") || q.contains("create") || q.contains("draw");
+        return (mentionsImage && asksToCreate) || q.contains("تصویرسازی کن") || q.contains("نقاشی بکش");
+    }
+
     private void playAudio(String path) {
         try {
             if (audioPlayer != null) { audioPlayer.release(); audioPlayer = null; }
@@ -352,7 +362,10 @@ public class MainActivity extends Activity {
             saveHistory();
         } catch (Exception ignored) {}
         addMessage(question, true);
-        TextView typing = text("PixCore 1 در حال فکر کردن است…", 13, 0xffaaaaaa, false);
+        String progressLabel = isImageGenerationRequest(question)
+                ? "در حال ساخت عکس است…"
+                : "PixCore 1 در حال فکر کردن است…";
+        TextView typing = text(progressLabel, 13, 0xffaaaaaa, false);
         typing.setPadding(dp(36), dp(10), dp(8), dp(12));
         messageList.addView(typing);
         scroll.post(() -> scroll.fullScroll(ScrollView.FOCUS_DOWN));
