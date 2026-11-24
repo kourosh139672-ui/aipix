@@ -464,6 +464,7 @@ videoModeButton?.addEventListener('click', () => {
   messagesEl.appendChild(panel);
   videoModeButton.classList.toggle('active', videoMode);
   codeModeButton?.classList.toggle("active", codeMode);
+  updateCodeMode();
   promptEl.placeholder = videoMode ? 'صحنه انیمیشن دوبعدی رو توصیف کن...' : 'پیامت رو اینجا بنویس...';
   promptEl.focus();
 });
@@ -502,6 +503,7 @@ document.getElementById("newChat").addEventListener("click", () => {
   panel.className = "welcome";
   panel.innerHTML = '<div class="welcome-icon">✦</div><h1>گفت‌وگوی تازه</h1><p>سؤالت رو بنویس تا شروع کنیم.</p>';
   messagesEl.appendChild(panel);
+  updateCodeMode();
   promptEl.focus();
 });
 document.getElementById("menuBtn").addEventListener("click", () => {
