@@ -30,9 +30,9 @@ Currently available tools:
 
 - `generate_image`: called by GLM-4.7-Flash when the user explicitly requests an image.
 - `generate_music`: called when the user explicitly asks PixAI to compose or generate music.
-- `web_search`: called when the user asks about current, recent, changing, or source-backed information. The Worker uses Cloudflare Web Search API with the Ceramic provider, sends results back to GLM-4.7-Flash, and returns HTTPS source links in `sources[]`. Search happens naturally in the normal chat, without a separate mode or button.
+- `web_search`: called when the user asks about current, recent, changing, or source-backed information. The Worker calls a provider-independent `runWebSearch(env, query)` adapter, sends results back to GLM-4.7-Flash, and returns HTTPS source links in `sources[]`. Search happens naturally in the normal chat, without a separate mode or button. The adapter is disabled by default (`WEB_SEARCH_PROVIDER=disabled`) so it cannot accidentally incur paid search charges. Set `WEB_SEARCH_PROVIDER=ceramic` only when the account owner intentionally enables a paid provider. Future providers can be added inside the adapter without changing PixAI Core or the frontend.
 
-Web Search uses Cloudflare AI Gateway credits or a configured provider key. Ceramic is listed at $0.25 per 1,000 requests. It is not unlimited free search; the account needs gateway credits or a provider key. See https://developers.cloudflare.com/web-search/.
+Current state: provider adapter implemented but disabled by default. No free full-web provider has been selected yet. Cloudflare lists Ceramic at $0.25 per 1,000 requests, so it must remain disabled unless explicitly enabled. See https://developers.cloudflare.com/web-search/providers/.
 
 The browser renders an image only when the API returns image data. The assistant must not claim success when tool execution fails. Add future tools by defining a validated schema, implementing the server-side handler in the Worker, returning structured results, and adding any required UI renderer. Never execute arbitrary code or accept provider credentials from model-generated arguments.
 
