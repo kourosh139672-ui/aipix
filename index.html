@@ -16,6 +16,16 @@
       <div class="model"><span class="status-dot"></span><span>PixAI Core</span></div>
       <button class="code-mode" id="codeMode" type="button">⌘ حالت برنامه‌نویسی: خاموش</button>
       <button class="video-mode" id="videoMode" type="button">🎬 موتور ویدیوی دوبعدی</button>
+      <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false">⚙ تنظیمات</button>
+      <section class="settings-panel" id="settingsPanel" hidden>
+        <label for="reasoningLevel">اندازه استدلال</label>
+        <select id="reasoningLevel">
+          <option value="1">۱. سریع</option>
+          <option value="2">۲. دقیق</option>
+          <option value="3">۳. عمیق</option>
+        </select>
+        <p>در درجه‌های ۲ و ۳، PixAI می‌تواند از دو گفت‌وگوی قبلی و حافظهٔ ذخیره‌شدهٔ مرتبط استفاده کند. درجهٔ ۳ بازبینی بیشتری انجام می‌دهد و ممکن است کندتر و پرمصرف‌تر باشد.</p>
+      </section>
       <div class="side-note">نسخه آزمایشی PixAI</div>
       <div class="side-footer">ساخته‌شده با هوش مصنوعی</div>
     </aside>
