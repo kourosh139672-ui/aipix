@@ -38,9 +38,10 @@
         </div>
       </div>
       <div class="composer-wrap">
-        <div class="privacy">پیام‌ها برای پردازش به Cloudflare Workers AI فرستاده می‌شوند؛ اطلاعات شخصی یا محرمانه ننویس.</div>
+        <div class="privacy">پیام‌ها به Cloudflare فرستاده می‌شوند. هنگام تایپ صوتی، صدا ممکن است برای تشخیص گفتار به سرویس مرورگر ارسال شود؛ اطلاعات محرمانه نگو.</div>
         <form class="composer" id="chatForm">
           <textarea id="prompt" rows="1" placeholder="پیامت رو اینجا بنویس..." aria-label="پیام شما"></textarea>
+          <button id="micBtn" type="button" aria-label="تایپ صوتی فارسی" aria-pressed="false" title="تایپ صوتی فارسی">🎙</button>
           <button id="sendBtn" type="submit" aria-label="ارسال پیام">➤</button>
         </form>
         <div class="disclaimer">PixAI ممکن است اشتباه کند؛ پاسخ‌ها را بررسی کن.</div>
