@@ -389,17 +389,17 @@ public class MainActivity extends Activity {
         JSONArray messages = new JSONArray();
         String profile = memoryEnabled ? "\\nنام کاربر را حدس نزن و از نامی که کاربر صریحاً در همین گفتگو تأیید نکرده استفاده نکن. اگر کاربر گفت نامی که به او نسبت داده‌ای اشتباه است، حرف او را بپذیر و دیگر آن نام را به کار نبر. با فارسی روان، صمیمی و محترمانه پاسخ بده. یادداشت‌های شخصی: " + personalNotes + buildCrossChatContext() : "";
         messages.put(new JSONObject().put("role", "system").put("content", SYSTEM + profile));
-        int start = Math.max(0, history.size() - 24);
+        int start = Math.max(0, history.size() - 12);
         for (int i = start; i < history.size(); i++) messages.put(history.get(i));
         JSONObject payload = new JSONObject()
                 .put("model", "auto")
                 .put("client_id", clientId)
                 .put("reasoning_level", reasoningLevel)
                 .put("messages", messages)
-                .put("max_tokens", 1400);
+                .put("max_tokens", 900);
         HttpURLConnection connection = (HttpURLConnection)new URL(API + "/v1/chat/completions").openConnection();
         connection.setRequestMethod("POST");
-        connection.setConnectTimeout(20000);
+        connection.setConnectTimeout(12000);
         connection.setReadTimeout(240000);
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
