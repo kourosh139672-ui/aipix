@@ -36,6 +36,52 @@ const promptEl = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
 const welcome = document.getElementById("welcome");
 let history = [];
+
+const REASONING_LEVEL_KEY = "pixai_reasoning_level";
+const reasoningSelect = document.getElementById("reasoningLevel");
+const settingsToggle = document.getElementById("settingsToggle");
+const settingsPanel = document.getElementById("settingsPanel");
+let reasoningLevel = Math.max(1, Math.min(3, Number(localStorage.getItem(REASONING_LEVEL_KEY) || 1)));
+if (reasoningSelect) reasoningSelect.value = String(reasoningLevel);
+reasoningSelect?.addEventListener("change", () => {
+  reasoningLevel = Math.max(1, Math.min(3, Number(reasoningSelect.value) || 1));
+  localStorage.setItem(REASONING_LEVEL_KEY, String(reasoningLevel));
+});
+settingsToggle?.addEventListener("click", () => {
+  if (!settingsPanel) return;
+  const open = settingsPanel.hasAttribute("hidden");
+  settingsPanel.toggleAttribute("hidden", !open);
+  settingsToggle.classList.toggle("active", open);
+  settingsToggle.setAttribute("aria-expanded", String(open));
+});
+const CHAT_ARCHIVE_KEY = "pixai_recent_chats";
+const ACTIVE_CHAT_KEY = "pixai_active_chat";
+function readChatArchive() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CHAT_ARCHIVE_KEY) || "[]");
+    return Array.isArray(value) ? value.slice(-2) : [];
+  } catch { return []; }
+}
+function persistActiveChat() {
+  try { localStorage.setItem(ACTIVE_CHAT_KEY, JSON.stringify(history.slice(-24))); } catch {}
+}
+function archiveCurrentChat() {
+  if (!history.length) return;
+  const archive = readChatArchive();
+  archive.push(history.slice(-24).map(m => ({role:m.role, content:String(m.content || "").slice(0,3000)})));
+  try {
+    localStorage.setItem(CHAT_ARCHIVE_KEY, JSON.stringify(archive.slice(-2)));
+    localStorage.removeItem(ACTIVE_CHAT_KEY);
+  } catch {}
+}
+function getRecentChatsForRequest() {
+  if (reasoningLevel < 2) return [];
+  return readChatArchive().map(chat => Array.isArray(chat) ? chat.slice(-8).map(m => ({
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: String(m.content || "").slice(0,1200)
+  })) : []).filter(chat => chat.length);
+}
+
 const PIXAI_CLIENT_ID = (() => {
   let id = localStorage.getItem("pixai_client_id");
   if (!id) {
@@ -44,6 +90,14 @@ const PIXAI_CLIENT_ID = (() => {
   }
   return id;
 })();
+try {
+  const saved = JSON.parse(localStorage.getItem(ACTIVE_CHAT_KEY) || "[]");
+  if (Array.isArray(saved)) history = saved.filter(m => m && ["user","assistant"].includes(m.role) && typeof m.content === "string").slice(-24);
+  if (history.length) {
+    welcome?.remove();
+    history.forEach(m => addMessage(m.role, m.content));
+  }
+} catch {}
 let busy = false;
 let codeMode = false;
 let videoMode = false;
@@ -151,6 +205,7 @@ async function sendMessage(text) {
   if (welcome?.isConnected) welcome.remove();
   addMessage("user", clean);
   history.push({ role: "user", content: clean });
+  persistActiveChat();
   promptEl.value = "";
   promptEl.style.height = "auto";
   setBusy(true);
@@ -163,6 +218,8 @@ async function sendMessage(text) {
       body: JSON.stringify({
         model: "auto",
         client_id: PIXAI_CLIENT_ID,
+        reasoning_level: codeMode ? 1 : reasoningLevel,
+        recent_chats: codeMode ? [] : getRecentChatsForRequest(),
         messages: codeMode ? history : [{ role: "system", content: SYSTEM_PROMPT }, ...history],
         max_tokens: codeMode ? 2048 : 768
       })
@@ -180,6 +237,7 @@ async function sendMessage(text) {
     const answer = data?.choices?.[0]?.message?.content;
     if (typeof answer !== "string" || !answer.trim()) throw new Error("پاسخ سرویس خالی بود.");
     history.push({ role: "assistant", content: answer });
+    persistActiveChat();
     const imageData = data?.images?.[0]?.b64_json || null;
     addMessage("assistant", answer, "", imageData);
     const sources = Array.isArray(data?.sources) ? data.sources : [];
@@ -220,6 +278,7 @@ async function sendMessage(text) {
       : "";
     addMessage("assistant", msg + corsHint, "error");
     history.pop();
+    persistActiveChat();
   } finally {
     setBusy(false);
     promptEl.focus();
@@ -312,6 +371,7 @@ videoModeButton?.addEventListener('click', () => {
   if (busy) return;
   videoMode = !videoMode;
   codeMode = false;
+  archiveCurrentChat();
   history = [];
   messagesEl.innerHTML = '';
   const panel = document.createElement('div');
@@ -330,6 +390,7 @@ codeModeButton?.addEventListener("click", () => {
   videoModeButton?.classList.remove('active');
   if (busy) return;
   codeMode = !codeMode;
+  archiveCurrentChat();
   history = [];
   messagesEl.innerHTML = "";
   const panel = document.createElement("div");
