@@ -76,8 +76,10 @@ async def generate_image(
     request: ImageRequest,
     authorization: Optional[str] = Header(default=None),
 ) -> dict[str, Any]:
-    client_token = os.getenv("PIXAI_IMAGE_API_TOKEN", "")
-    if client_token and authorization != f"Bearer {client_token}":
+    client_token = os.getenv("PIXAI_IMAGE_API_TOKEN", "").strip()
+    if not client_token:
+        raise HTTPException(status_code=503, detail="Server authentication is not configured")
+    if authorization != f"Bearer {client_token}":
         raise HTTPException(status_code=401, detail="Invalid API token")
 
     provider_url = os.getenv("IMAGE_PROVIDER_URL", "").strip()
