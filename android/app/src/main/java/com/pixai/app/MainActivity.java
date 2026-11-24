@@ -387,7 +387,7 @@ public class MainActivity extends Activity {
 
     private ChatResult requestChat(String question) throws Exception {
         JSONArray messages = new JSONArray();
-        String profile = memoryEnabled ? "\\nاطلاعات پایدار مجاز درباره کاربر: نام او کوروش است. با او فارسی روان، صمیمی و محترمانه صحبت کن. این اطلاعات را در همه گفتگوهای این نصب در نظر بگیر. " + personalNotes + buildCrossChatContext() : "";
+        String profile = memoryEnabled ? "\\nنام کاربر را حدس نزن و از نامی که کاربر صریحاً در همین گفتگو تأیید نکرده استفاده نکن. اگر کاربر گفت نامی که به او نسبت داده‌ای اشتباه است، حرف او را بپذیر و دیگر آن نام را به کار نبر. با فارسی روان، صمیمی و محترمانه پاسخ بده. یادداشت‌های شخصی: " + personalNotes + buildCrossChatContext() : "";
         messages.put(new JSONObject().put("role", "system").put("content", SYSTEM + profile));
         int start = Math.max(0, history.size() - 24);
         for (int i = start; i < history.size(); i++) messages.put(history.get(i));
@@ -711,7 +711,7 @@ public class MainActivity extends Activity {
                         Toast.makeText(this, memoryEnabled ? "حافظه روشن شد." : "حافظه خاموش شد.", Toast.LENGTH_SHORT).show();
                     } else if (which == 1) {
                         new AlertDialog.Builder(this).setTitle("حافظهٔ PixAI")
-                                .setMessage("نام: کوروش\\n" + (personalNotes.isEmpty() ? "یادداشت شخصی دیگری ذخیره نشده." : personalNotes))
+                                .setMessage((personalNotes.isEmpty() ? "نام یا اطلاعات شخصی تأییدشده‌ای ذخیره نشده." : personalNotes))
                                 .setPositiveButton("بستن", null).show();
                     } else {
                         personalNotes = "";
