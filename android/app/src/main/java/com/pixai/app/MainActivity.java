@@ -634,14 +634,71 @@ public class MainActivity extends Activity {
     }
 
     private void showSettings() {
-        String[] items = {"مدیریت حافظه", "اندازهٔ تفکر", "ظاهر برنامه", "شخصی‌سازی"};
-        new AlertDialog.Builder(this).setTitle("تنظیمات")
-                .setItems(items, (d, which) -> {
-                    if (which == 0) memorySettings();
-                    else if (which == 1) reasoningSettings();
-                    else if (which == 2) appearanceSettings();
-                    else personalizationSettings();
-                }).show();
+        if (screenFrame == null) return;
+        closeSideMenu();
+        menuScrim = new View(this);
+        menuScrim.setBackgroundColor(0x99000000);
+        screenFrame.addView(menuScrim, new FrameLayout.LayoutParams(-1, -1));
+        menuScrim.setOnClickListener(v -> closeSideMenu());
+
+        sidePanel = new LinearLayout(this);
+        sidePanel.setOrientation(LinearLayout.VERTICAL);
+        sidePanel.setPadding(dp(16), dp(18), dp(16), dp(14));
+        sidePanel.setBackgroundColor(lightTheme ? 0xfff5f5f5 : 0xff292929);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                Math.min(dp(340), (int)(getResources().getDisplayMetrics().widthPixels * 0.88f)),
+                -1, Gravity.RIGHT | Gravity.TOP);
+        screenFrame.addView(sidePanel, params);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView back = text("‹", 30, lightTheme ? 0xff202020 : Color.WHITE, false);
+        back.setGravity(Gravity.CENTER);
+        header.addView(back, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        back.setOnClickListener(v -> { closeSideMenu(); showSideMenu(); });
+        TextView title = text("تنظیمات", 21, lightTheme ? 0xff202020 : Color.WHITE, true);
+        title.setPadding(dp(10), 0, 0, 0);
+        header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView close = text("×", 28, lightTheme ? 0xff202020 : Color.WHITE, false);
+        close.setGravity(Gravity.CENTER);
+        header.addView(close, new LinearLayout.LayoutParams(dp(40), dp(42)));
+        close.setOnClickListener(v -> closeSideMenu());
+        sidePanel.addView(header);
+
+        TextView subtitle = text("شخصی‌سازی تجربهٔ PixAI", 13, 0xff999999, false);
+        subtitle.setPadding(dp(10), dp(4), dp(10), dp(18));
+        sidePanel.addView(subtitle);
+
+        addSettingsRow("حافظه", "مدیریت اطلاعات ذخیره‌شده", "▤", () -> memorySettings());
+        addSettingsRow("اندازهٔ تفکر", "تنظیم میزان بررسی و استدلال", "✳", () -> reasoningSettings());
+        addSettingsRow("ظاهر برنامه", "حالت روشن یا تیره", "◐", () -> appearanceSettings());
+        addSettingsRow("شخصی‌سازی", "تنظیم ترجیحات پاسخ‌گویی", "⚙", () -> personalizationSettings());
+    }
+
+    private void addSettingsRow(String title, String detail, String symbol, Runnable action) {
+        LinearLayout item = new LinearLayout(this);
+        item.setOrientation(LinearLayout.VERTICAL);
+        item.setPadding(dp(13), dp(13), dp(13), dp(13));
+        item.setBackground(rounded(lightTheme ? 0xffeaeaea : 0xff353535, 15));
+        LinearLayout top = new LinearLayout(this);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        TextView icon = text(symbol, 20, lightTheme ? 0xff333333 : Color.WHITE, true);
+        top.addView(icon, new LinearLayout.LayoutParams(dp(38), -2));
+        TextView label = text(title, 15, lightTheme ? 0xff202020 : Color.WHITE, true);
+        top.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView arrow = text("‹", 24, 0xff999999, false);
+        top.addView(arrow);
+        item.addView(top);
+        TextView description = text(detail, 12, 0xff999999, false);
+        description.setPadding(dp(38), dp(5), 0, 0);
+        item.addView(description);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.bottomMargin = dp(9);
+        sidePanel.addView(item, lp);
+        item.setOnClickListener(v -> {
+            closeSideMenu();
+            action.run();
+        });
     }
 
     private void memorySettings() {
