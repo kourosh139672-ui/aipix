@@ -31,3 +31,13 @@ Currently available tool:
 - `generate_image`: called by GLM-4.7-Flash when the user explicitly requests a new image. The Worker executes FLUX.2 Klein 4B and returns the generated image in `images[0].b64_json` alongside the assistant text.
 
 The browser renders an image only when the API returns image data. The assistant must not claim success when tool execution fails. Add future tools by defining a validated schema, implementing the server-side handler in the Worker, returning structured results, and adding any required UI renderer. Never execute arbitrary code or accept provider credentials from model-generated arguments.
+
+
+## PixAI Code
+
+- `POST /v1/code/completions`
+- Provider model: `qwen3-coder-flash` (Alibaba Cloud Model Studio)
+- Configure `QWEN_API_URL` as a Worker variable using the exact OpenAI-compatible base URL for the Model Studio workspace and region; configure `QWEN_API_KEY` as a Worker secret.
+- The Worker proxies only validated chat messages to Qwen. It does not execute generated code or write to a repository.
+- The frontend exposes a separate Code mode. Code mode is unavailable until both server-side settings are configured.
+- Never put the provider key in browser JavaScript or GitHub.
