@@ -203,7 +203,7 @@ videoModeButton?.addEventListener('click', () => {
   messagesEl.innerHTML = '';
   const panel = document.createElement('div');
   panel.className = 'welcome';
-  panel.innerHTML = videoMode ? '<div class="welcome-icon">🎬</div><h1>PixAI VideoEngine 2D</h1><p>ساخت انیمیشن دوبعدی از متن و تصویر</p><p class="video-status">رابط اولیه اضافه شده؛ اتصال مدل ویدیویی هنوز انجام نشده است.</p>' : '<div class="welcome-icon">✦</div><h1>سلام! من PixAI هستم</h1><p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>';
+  panel.innerHTML = videoMode ? '<div class="welcome-icon">🎬</div><h1>PixAI VideoEngine 2D</h1><p>تبدیل متن یا تصویر به انیمیشن دوبعدی</p><div class="video-controls"><label for="videoStyle">سبک</label><select id="videoStyle"><option value="2d">انیمیشن دوبعدی</option><option value="anime">انیمه دوبعدی</option><option value="cartoon">کارتونی</option></select><label for="videoImageUrl">لینک تصویر (اختیاری)</label><input id="videoImageUrl" type="url" placeholder="https://..."></div><p class="video-status">مدل LTX-2.3 Fast؛ هزینه مصرف Cloudflare اعمال می‌شود.</p>' : '<div class="welcome-icon">✦</div><h1>سلام! من PixAI هستم</h1><p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>';
   messagesEl.appendChild(panel);
   videoModeButton.classList.toggle('active', videoMode);
   promptEl.placeholder = videoMode ? 'صحنه انیمیشن دوبعدی رو توصیف کن...' : 'پیامت رو اینجا بنویس...';
