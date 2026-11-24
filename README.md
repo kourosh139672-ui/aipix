@@ -35,3 +35,19 @@ Run its tests with:
 ```bash
 python -m unittest discover -s tests
 ```
+
+
+## Cloudflare AI runtime
+
+The PixAI chat frontend now defaults to the Cloudflare Worker endpoint:
+
+- Worker: `https://aipix-api.kourosh-1396-72.workers.dev`
+- Health: `GET /health`
+- Chat: `POST /v1/chat/completions`
+- Image generation: `POST /v1/images/generations`
+
+The Worker uses GLM-4.7-Flash for conversation and FLUX.2 Klein 4B for image generation through Workers AI. The chat model has a server-side `generate_image` function tool. When the model requests that tool, the Worker validates the prompt, runs the image model, and returns the generated image as `images[0].b64_json`. The frontend renders that image in the conversation.
+
+The browser asks for the private API token at runtime and keeps it only in session storage. Do not commit the token to this repository. For a public production app, replace browser-held bearer tokens with a server-side session or an abuse-protected authentication flow.
+
+This is tool orchestration through function calling and instructions, not a new fine-tune. The current live tool set contains image generation; additional tools should be added with explicit schemas, server-side validation, and UI handling.
