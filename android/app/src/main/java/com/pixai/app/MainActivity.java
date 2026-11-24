@@ -325,14 +325,18 @@ public class MainActivity extends Activity {
         if (busy) return;
         String question = composer.getText().toString().trim();
         if (question.isEmpty()) return;
-        if (isVideoGenerationRequest(question) && !question.equals(confirmedVideoPrompt)) {
-            new AlertDialog.Builder(this).setTitle("هزینهٔ ساخت ویدیو")
-                    .setMessage("ساخت یک ویدیوی ۶ ثانیه‌ای با کیفیت 720p از طریق سرویس ابری ممکن است حدود ۰٫۱۸ دلار هزینه داشته باشد و مبلغ نهایی به حساب Cloudflare بستگی دارد. فقط اگر صاحب حساب اجازهٔ استفادهٔ پولی داده است ادامه بده.")
-                    .setPositiveButton("ادامه", (d, w) -> { confirmedVideoPrompt = question; composer.setText(question); sendMessage(); })
-                    .setNegativeButton("لغو", null).show();
+        if (isVideoGenerationRequest(question)) {
+            composer.setText("");
+            addMessage(question, true);
+            String unavailable = "به دلیل تمام شدن موجودی سازنده، قابلیت ساخت ویدیو فعلاً غیرفعال شده است.";
+            addMessage(unavailable, false);
+            try {
+                history.add(new JSONObject().put("role", "user").put("content", question));
+                history.add(new JSONObject().put("role", "assistant").put("content", unavailable));
+                saveHistory();
+            } catch (Exception ignored) {}
             return;
         }
-        if (question.equals(confirmedVideoPrompt)) confirmedVideoPrompt = null;
         composer.setText("");
         ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE))
                 .hideSoftInputFromWindow(composer.getWindowToken(), 0);
