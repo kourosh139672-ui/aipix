@@ -23,3 +23,7 @@
 .music-result{display:flex;flex-direction:column;gap:10px}
 .music-result audio{width:min(100%,520px)}
 .music-result a{color:#6042df;font-size:13px}
+
+.composer #micBtn{flex:0 0 39px;background:#f0ecff;color:#6042df;font-size:18px;border:1px solid #e2dafb}
+.composer #micBtn.recording{background:#fff0f0;color:#c33;border-color:#f2bcbc;animation:mic-pulse 1.2s ease-in-out infinite}
+@keyframes mic-pulse{50%{box-shadow:0 0 0 5px #e55a5a22}}
