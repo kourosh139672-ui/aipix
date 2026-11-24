@@ -37,6 +37,8 @@ public class MainActivity extends Activity {
     private static final String SYSTEM = "تو PixAI هستی، دستیار فارسی‌زبان PixCore 1. به فارسی روان، دقیق و طبیعی پاسخ بده. از تاریخچه همین گفتگو استفاده کن. اگر ابزاری در دسترس نیست، صادقانه بگو و ادعای موفقیت نکن.";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final ArrayList<JSONObject> history = new ArrayList<>();
+    private final ArrayList<JSONObject> conversations = new ArrayList<>();
+    private String currentConversationId;
     private String clientId;
     private LinearLayout root, messageList;
     private ScrollView scroll;
@@ -387,18 +389,43 @@ public class MainActivity extends Activity {
 
     private void newChat() {
         if (busy) return;
-        history.clear();
         saveHistory();
+        currentConversationId = UUID.randomUUID().toString();
+        history.clear();
+        getPreferences(0).edit().putString("current_conversation", currentConversationId).apply();
         renderHistory();
     }
 
     private void showHistory() {
-        new AlertDialog.Builder(this)
-                .setTitle("گفتگوی فعلی")
-                .setMessage("تاریخچهٔ این نسخه روی همین دستگاه نگهداری می‌شود.")
+        if (conversations.isEmpty()) {
+            new AlertDialog.Builder(this).setTitle("گفتگوهای ذخیره‌شده")
+                    .setMessage("هنوز گفتگویی ذخیره نشده است.")
+                    .setPositiveButton("گفتگوی جدید", (d, w) -> newChat())
+                    .setNegativeButton("بستن", null).show();
+            return;
+        }
+        String[] titles = new String[conversations.size()];
+        for (int i = 0; i < conversations.size(); i++) {
+            titles[i] = conversations.get(i).optString("title", "گفتگوی بدون عنوان");
+        }
+        new AlertDialog.Builder(this).setTitle("گفتگوهای ذخیره‌شده")
+                .setItems(titles, (dialog, which) -> {
+                    try {
+                        JSONObject selected = conversations.get(which);
+                        currentConversationId = selected.optString("id");
+                        history.clear();
+                        JSONArray messages = selected.optJSONArray("messages");
+                        if (messages != null) {
+                            for (int i = 0; i < messages.length(); i++) history.add(messages.getJSONObject(i));
+                        }
+                        getPreferences(0).edit().putString("current_conversation", currentConversationId).apply();
+                        renderHistory();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "بارگذاری گفتگو انجام نشد.", Toast.LENGTH_SHORT).show();
+                    }
+                })
                 .setPositiveButton("گفتگوی جدید", (d, w) -> newChat())
-                .setNegativeButton("بستن", null)
-                .show();
+                .setNegativeButton("بستن", null).show();
     }
 
     private void startVoice() {
@@ -423,15 +450,74 @@ public class MainActivity extends Activity {
 
     private void restoreHistory() {
         try {
-            JSONArray saved = new JSONArray(getPreferences(0).getString("history", "[]"));
-            for (int i = 0; i < saved.length(); i++) history.add(saved.getJSONObject(i));
-        } catch (Exception ignored) {}
+            String stored = getPreferences(0).getString("conversations", "");
+            if (!stored.isEmpty()) {
+                JSONArray all = new JSONArray(stored);
+                for (int i = 0; i < all.length(); i++) conversations.add(all.getJSONObject(i));
+            }
+            currentConversationId = getPreferences(0).getString("current_conversation", "");
+            if (currentConversationId.isEmpty()) currentConversationId = UUID.randomUUID().toString();
+
+            JSONObject active = findConversation(currentConversationId);
+            if (active == null) {
+                JSONArray legacy = new JSONArray(getPreferences(0).getString("history", "[]"));
+                if (legacy.length() > 0) {
+                    active = new JSONObject().put("id", currentConversationId)
+                            .put("title", legacy.optJSONObject(0) == null ? "گفتگوی قبلی" :
+                                    legacy.optJSONObject(0).optString("content", "گفتگوی قبلی"))
+                            .put("messages", legacy);
+                    conversations.add(active);
+                } else {
+                    active = new JSONObject().put("id", currentConversationId)
+                            .put("title", "گفتگوی جدید").put("messages", new JSONArray());
+                    conversations.add(active);
+                }
+            }
+            JSONArray messages = active.optJSONArray("messages");
+            if (messages != null) for (int i = 0; i < messages.length(); i++) history.add(messages.getJSONObject(i));
+            getPreferences(0).edit().putString("current_conversation", currentConversationId).apply();
+            persistConversations();
+        } catch (Exception ignored) {
+            if (currentConversationId == null || currentConversationId.isEmpty()) currentConversationId = UUID.randomUUID().toString();
+        }
+    }
+
+    private JSONObject findConversation(String id) {
+        for (JSONObject item : conversations) if (id.equals(item.optString("id"))) return item;
+        return null;
     }
 
     private void saveHistory() {
-        JSONArray saved = new JSONArray();
-        for (JSONObject item : history) saved.put(item);
-        getPreferences(0).edit().putString("history", saved.toString()).apply();
+        try {
+            JSONObject active = findConversation(currentConversationId);
+            if (active == null) {
+                active = new JSONObject().put("id", currentConversationId)
+                        .put("title", "گفتگوی جدید").put("messages", new JSONArray());
+                conversations.add(0, active);
+            }
+            JSONArray messages = new JSONArray();
+            for (JSONObject item : history) messages.put(item);
+            String title = "گفتگوی جدید";
+            for (JSONObject item : history) {
+                if ("user".equals(item.optString("role"))) {
+                    title = item.optString("content", "گفتگوی جدید");
+                    if (title.length() > 42) title = title.substring(0, 42) + "…";
+                    break;
+                }
+            }
+            active.put("title", title);
+            active.put("messages", messages);
+            persistConversations();
+        } catch (Exception ignored) {}
+    }
+
+    private void persistConversations() {
+        JSONArray all = new JSONArray();
+        for (JSONObject item : conversations) all.put(item);
+        getPreferences(0).edit()
+                .putString("conversations", all.toString())
+                .putString("current_conversation", currentConversationId)
+                .apply();
     }
 
     private String safe(Exception error) {
