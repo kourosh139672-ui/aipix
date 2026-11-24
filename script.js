@@ -41,7 +41,7 @@ function updateCodeMode() {
 
 
 function renderProjectFiles(messageEl, content) {
-  const pattern = /###\\s*FILE:\\s*([^\\n]+)\\n\\s*```[^\\n]*\\n([\\s\\S]*?)\\n```/g;
+  const pattern = /###\s*FILE:\s*([^\n]+)\n\s*```[^\n]*\n([\s\S]*?)\n```/g;
   const found = [...content.matchAll(pattern)];
   if (!found.length) return;
   const panel = document.createElement("div");
@@ -50,7 +50,7 @@ function renderProjectFiles(messageEl, content) {
   title.textContent = "فایل‌های پروژه";
   panel.appendChild(title);
   found.forEach((match, index) => {
-    const path = match[1].trim().replace(/^\\/+/, "").replace(/\\.\\./g, "").replace(/[^\\p{L}\\p{N}._/-]/gu, "_");
+    const path = match[1].trim().replace(/^\/+/, "").replace(/\.\./g, "").replace(/[^a-zA-Z0-9_.\/-]/g, "_");
     if (!path || path.endsWith("/")) return;
     const url = URL.createObjectURL(new Blob([match[2]], { type: "text/plain;charset=utf-8" }));
     const link = document.createElement("a");
