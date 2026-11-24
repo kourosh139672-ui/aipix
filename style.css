@@ -27,3 +27,11 @@
 .composer #micBtn{flex:0 0 39px;background:#f0ecff;color:#6042df;font-size:18px;border:1px solid #e2dafb}
 .composer #micBtn.recording{background:#fff0f0;color:#c33;border-color:#f2bcbc;animation:mic-pulse 1.2s ease-in-out infinite}
 @keyframes mic-pulse{50%{box-shadow:0 0 0 5px #e55a5a22}}
+
+.settings-toggle{border:1px solid #e7e1f5;background:#fff;color:#6550bd;border-radius:12px;padding:11px 12px;font:600 12px Vazirmatn,Tahoma,sans-serif;cursor:pointer;text-align:right}
+.settings-toggle.active{background:#f0ecff;border-color:#9b85ff}
+.settings-panel{padding:12px;border:1px solid #e9e3f5;border-radius:12px;background:#fff;display:flex;flex-direction:column;gap:9px}
+.settings-panel[hidden]{display:none}
+.settings-panel label{font-size:12px;font-weight:700;color:#5e4ba4}
+.settings-panel select{width:100%;font:12px Vazirmatn,Tahoma,sans-serif;border:1px solid #e5e1ef;border-radius:9px;padding:9px;background:#fff;color:#332d48}
+.settings-panel p{font-size:10px;line-height:1.8;color:#898397;margin:0}
