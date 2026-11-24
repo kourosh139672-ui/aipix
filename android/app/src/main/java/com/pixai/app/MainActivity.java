@@ -344,7 +344,7 @@ public class MainActivity extends Activity {
 
     private ChatResult requestChat(String question) throws Exception {
         JSONArray messages = new JSONArray();
-        String profile = memoryEnabled ? "\\nاطلاعات پایدار مجاز درباره کاربر: نام او کوروش است. با او فارسی روان، صمیمی و محترمانه صحبت کن. این اطلاعات را در همه گفتگوهای این نصب در نظر بگیر. " + personalNotes : "";\n        messages.put(new JSONObject().put("role", "system").put("content", SYSTEM + profile));
+        String profile = memoryEnabled ? "\\nاطلاعات پایدار مجاز درباره کاربر: نام او کوروش است. با او فارسی روان، صمیمی و محترمانه صحبت کن. این اطلاعات را در همه گفتگوهای این نصب در نظر بگیر. " + personalNotes + buildCrossChatContext() : "";\n        messages.put(new JSONObject().put("role", "system").put("content", SYSTEM + profile));
         int start = Math.max(0, history.size() - 24);
         for (int i = start; i < history.size(); i++) messages.put(history.get(i));
         JSONObject payload = new JSONObject()
@@ -439,6 +439,29 @@ public class MainActivity extends Activity {
                 .setNegativeButton("بستن", null).show();
     }
 
+
+    private String buildCrossChatContext() {
+        StringBuilder context = new StringBuilder("\\nخلاصهٔ زمینه از گفتگوهای قبلی همین برنامه:");
+        int included = 0;
+        for (int i = conversations.size() - 1; i >= 0 && included < 4; i--) {
+            JSONObject conversation = conversations.get(i);
+            if (currentConversationId != null && currentConversationId.equals(conversation.optString("id"))) continue;
+            JSONArray messages = conversation.optJSONArray("messages");
+            if (messages == null || messages.length() == 0) continue;
+            context.append("\\nگفتگو: ").append(conversation.optString("title", "بدون عنوان"));
+            int start = Math.max(0, messages.length() - 4);
+            for (int j = start; j < messages.length(); j++) {
+                JSONObject m = messages.optJSONObject(j);
+                if (m != null) {
+                    String content = m.optString("content", "");
+                    if (content.length() > 300) content = content.substring(0, 300);
+                    context.append("\\n").append(m.optString("role")).append(": ").append(content);
+                }
+            }
+            included++;
+        }
+        return included == 0 ? "" : context.toString();
+    }
 
     private void showSideMenu() {
         String[] items = {"＋ گفتگوی جدید", "گفتگوهای قبلی", "⚙ تنظیمات"};
