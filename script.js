@@ -407,6 +407,7 @@ document.getElementById("newChat").addEventListener("click", () => {
   videoMode = false;
   videoModeButton?.classList.remove("active");
   promptEl.placeholder = "پیامت رو اینجا بنویس...";
+  archiveCurrentChat();
   history = [];
   messagesEl.innerHTML = "";
   const panel = document.createElement("div");
