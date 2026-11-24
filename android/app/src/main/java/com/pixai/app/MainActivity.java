@@ -18,6 +18,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.content.Context;
 import android.widget.*;
+import android.widget.FrameLayout;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -46,6 +47,9 @@ public class MainActivity extends Activity {
     private boolean lightTheme;
     private String personalNotes;
     private LinearLayout root, messageList;
+    private FrameLayout screenFrame;
+    private View menuScrim;
+    private LinearLayout sidePanel;
     private ScrollView scroll;
     private EditText composer;
     private TextView sendButton;
@@ -104,7 +108,10 @@ public class MainActivity extends Activity {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(lightTheme ? 0xfff7f7f7 : 0xff212121);
-        setContentView(root);
+        screenFrame = new FrameLayout(this);
+        screenFrame.setBackgroundColor(lightTheme ? 0xfff7f7f7 : 0xff212121);
+        screenFrame.addView(root, new FrameLayout.LayoutParams(-1, -1));
+        setContentView(screenFrame);
 
         LinearLayout top = new LinearLayout(this);
         top.setGravity(Gravity.CENTER_VERTICAL);
@@ -512,13 +519,118 @@ public class MainActivity extends Activity {
     }
 
     private void showSideMenu() {
-        String[] items = {"＋ گفتگوی جدید", "گفتگوهای قبلی", "⚙ تنظیمات"};
-        new AlertDialog.Builder(this).setTitle("PixAI")
-                .setItems(items, (d, which) -> {
-                    if (which == 0) newChat();
-                    else if (which == 1) showHistory();
-                    else showSettings();
-                }).show();
+        if (screenFrame == null || sidePanel != null) return;
+
+        menuScrim = new View(this);
+        menuScrim.setBackgroundColor(0x99000000);
+        screenFrame.addView(menuScrim, new FrameLayout.LayoutParams(-1, -1));
+        menuScrim.setOnClickListener(v -> closeSideMenu());
+
+        sidePanel = new LinearLayout(this);
+        sidePanel.setOrientation(LinearLayout.VERTICAL);
+        sidePanel.setPadding(dp(14), dp(18), dp(14), dp(12));
+        sidePanel.setBackgroundColor(lightTheme ? 0xfff5f5f5 : 0xff292929);
+        FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
+                Math.min(dp(320), (int)(getResources().getDisplayMetrics().widthPixels * 0.84f)),
+                -1, Gravity.RIGHT | Gravity.TOP);
+        screenFrame.addView(sidePanel, panelParams);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(8), dp(5), dp(8), dp(14));
+        TextView heading = text("PixAI", 21, lightTheme ? 0xff202020 : Color.WHITE, true);
+        header.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView close = text("×", 30, lightTheme ? 0xff333333 : Color.WHITE, false);
+        close.setGravity(Gravity.CENTER);
+        header.addView(close, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        close.setOnClickListener(v -> closeSideMenu());
+        sidePanel.addView(header);
+
+        View divider = new View(this);
+        divider.setBackgroundColor(lightTheme ? 0xffdddddd : 0xff444444);
+        sidePanel.addView(divider, new LinearLayout.LayoutParams(-1, dp(1)));
+
+        ScrollView chatScroll = new ScrollView(this);
+        chatScroll.setFillViewport(false);
+        LinearLayout chatItems = new LinearLayout(this);
+        chatItems.setOrientation(LinearLayout.VERTICAL);
+        chatItems.setPadding(0, dp(8), 0, dp(8));
+
+        TextView newChatItem = text("＋  گفتگوی جدید", 15,
+                lightTheme ? 0xff202020 : Color.WHITE, true);
+        newChatItem.setGravity(Gravity.CENTER_VERTICAL);
+        newChatItem.setPadding(dp(12), dp(14), dp(12), dp(14));
+        chatItems.addView(newChatItem, new LinearLayout.LayoutParams(-1, -2));
+        newChatItem.setOnClickListener(v -> {
+            closeSideMenu();
+            newChat();
+        });
+
+        TextView chatsTitle = text("چت‌ها", 12, 0xff999999, true);
+        chatsTitle.setPadding(dp(12), dp(12), dp(12), dp(7));
+        chatItems.addView(chatsTitle);
+
+        for (int i = 0; i < conversations.size(); i++) {
+            final JSONObject conversation = conversations.get(i);
+            final String id = conversation.optString("id");
+            String title = conversation.optString("title", "گفتگوی بدون عنوان");
+            if (title.length() > 34) title = title.substring(0, 34) + "…";
+            TextView chat = text("  " + title, 14,
+                    lightTheme ? 0xff303030 : 0xffeeeeee, false);
+            chat.setGravity(Gravity.CENTER_VERTICAL);
+            chat.setSingleLine(true);
+            chat.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            chat.setPadding(dp(12), dp(13), dp(12), dp(13));
+            if (id.equals(currentConversationId)) {
+                chat.setBackground(rounded(lightTheme ? 0xffe3e3e3 : 0xff3a3a3a, 12));
+            }
+            chatItems.addView(chat, new LinearLayout.LayoutParams(-1, -2));
+            chat.setOnClickListener(v -> {
+                closeSideMenu();
+                loadConversation(conversation);
+            });
+        }
+
+        chatScroll.addView(chatItems);
+        sidePanel.addView(chatScroll, new LinearLayout.LayoutParams(-1, 0, 1));
+
+        View bottomDivider = new View(this);
+        bottomDivider.setBackgroundColor(lightTheme ? 0xffdddddd : 0xff444444);
+        sidePanel.addView(bottomDivider, new LinearLayout.LayoutParams(-1, dp(1)));
+
+        TextView settingsItem = text("⚙   تنظیمات", 16,
+                lightTheme ? 0xff202020 : Color.WHITE, true);
+        settingsItem.setGravity(Gravity.CENTER_VERTICAL);
+        settingsItem.setPadding(dp(12), dp(16), dp(12), dp(12));
+        sidePanel.addView(settingsItem, new LinearLayout.LayoutParams(-1, -2));
+        settingsItem.setOnClickListener(v -> {
+            closeSideMenu();
+            showSettings();
+        });
+    }
+
+    private void closeSideMenu() {
+        if (screenFrame == null) return;
+        if (menuScrim != null) screenFrame.removeView(menuScrim);
+        if (sidePanel != null) screenFrame.removeView(sidePanel);
+        menuScrim = null;
+        sidePanel = null;
+    }
+
+    private void loadConversation(JSONObject selected) {
+        if (busy) return;
+        try {
+            currentConversationId = selected.optString("id");
+            history.clear();
+            JSONArray messages = selected.optJSONArray("messages");
+            if (messages != null) {
+                for (int i = 0; i < messages.length(); i++) history.add(messages.getJSONObject(i));
+            }
+            getPreferences(0).edit().putString("current_conversation", currentConversationId).apply();
+            renderHistory();
+        } catch (Exception e) {
+            Toast.makeText(this, "بارگذاری گفتگو انجام نشد.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showSettings() {
