@@ -20,3 +20,14 @@ The Colab notebook is a temporary development host, not a permanent public serve
 - Response: `data[0].url` or `data[0].b64_json`
 
 The app should only display an image as generated after the ImageEngine returns a successful response containing a usable image. Keep provider tokens on the server; never place them in a public GitHub repository or browser JavaScript.
+
+
+## Tool use
+
+The Cloudflare Worker exposes model-guided tool execution through the chat endpoint.
+
+Currently available tool:
+
+- `generate_image`: called by GLM-4.7-Flash when the user explicitly requests a new image. The Worker executes FLUX.2 Klein 4B and returns the generated image in `images[0].b64_json` alongside the assistant text.
+
+The browser renders an image only when the API returns image data. The assistant must not claim success when tool execution fails. Add future tools by defining a validated schema, implementing the server-side handler in the Worker, returning structured results, and adding any required UI renderer. Never execute arbitrary code or accept provider credentials from model-generated arguments.
