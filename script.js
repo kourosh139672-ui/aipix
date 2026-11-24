@@ -29,6 +29,15 @@ const sendBtn = document.getElementById("sendBtn");
 const welcome = document.getElementById("welcome");
 let history = [];
 let busy = false;
+let codeMode = false;
+const codeModeButton = document.getElementById("codeMode");
+function updateCodeMode() {
+  if (!codeModeButton) return;
+  codeModeButton.textContent = codeMode ? "⌘ حالت برنامه‌نویسی: روشن" : "⌘ حالت برنامه‌نویسی: خاموش";
+  codeModeButton.classList.toggle("active", codeMode);
+  const heading = document.querySelector(".topbar strong");
+  if (heading) heading.textContent = codeMode ? "PixAI Code" : "گفت‌وگوی جدید";
+}
 
 function addMessage(role, content, extra = "", imageData = null) {
   const el = document.createElement("div");
@@ -70,13 +79,14 @@ async function sendMessage(text) {
   setBusy(true);
   const typing = addMessage("typing", "PixAI در حال فکر کردنه…");
   try {
-    const response = await fetch(config.url + "/v1/chat/completions", {
+    const endpoint = codeMode ? "/v1/code/completions" : "/v1/chat/completions";
+    const response = await fetch(config.url + endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + config.token },
       body: JSON.stringify({
         model: "auto",
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
-        max_tokens: 768
+        messages: codeMode ? history : [{ role: "system", content: SYSTEM_PROMPT }, ...history],
+        max_tokens: codeMode ? 2048 : 768
       })
     });
     const data = await response.json().catch(() => ({}));
@@ -123,6 +133,20 @@ promptEl.addEventListener("keydown", event => {
 });
 document.querySelectorAll(".suggestion").forEach(button => {
   button.addEventListener("click", () => sendMessage(button.textContent));
+});
+codeModeButton?.addEventListener("click", () => {
+  if (busy) return;
+  codeMode = !codeMode;
+  history = [];
+  messagesEl.innerHTML = "";
+  const panel = document.createElement("div");
+  panel.className = "welcome";
+  panel.innerHTML = codeMode
+    ? '<div class="welcome-icon">⌘</div><h1>PixAI Code</h1><p>درخواست برنامه‌نویسی، ساخت پروژه یا رفع خطا رو بنویس.</p>'
+    : '<div class="welcome-icon">✦</div><h1>سلام! من PixAI هستم</h1><p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>';
+  messagesEl.appendChild(panel);
+  updateCodeMode();
+  promptEl.focus();
 });
 document.getElementById("newChat").addEventListener("click", () => {
   if (busy) return;
