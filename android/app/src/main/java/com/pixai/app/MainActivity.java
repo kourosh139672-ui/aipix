@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.util.Base64;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -50,7 +51,8 @@ public class MainActivity extends Activity {
     private TextView sendButton;
     private boolean busy = false;
     private MediaPlayer audioPlayer;
-    private static class ChatResult { String text; String imagePath; String audioPath; }
+    private static class ChatResult { String text; String imagePath; String audioPath; String videoUrl; }
+    private String confirmedVideoPrompt;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -216,16 +218,16 @@ public class MainActivity extends Activity {
             String role = item.optString("role");
             if ("user".equals(role)) addMessage(item.optString("content"), true);
             else if ("assistant".equals(role)) addMessage(item.optString("content"), false,
-                    item.optString("image_path", null), item.optString("audio_path", null));
+                    item.optString("image_path", null), item.optString("audio_path", null), item.optString("video_url", null));
         }
         scroll.post(() -> scroll.fullScroll(ScrollView.FOCUS_DOWN));
     }
 
     private void addMessage(String value, boolean fromUser) {
-        addMessage(value, fromUser, null, null);
+        addMessage(value, fromUser, null, null, null);
     }
 
-    private void addMessage(String value, boolean fromUser, String imagePath, String audioPath) {
+    private void addMessage(String value, boolean fromUser, String imagePath, String audioPath, String videoUrl) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(fromUser ? Gravity.RIGHT : Gravity.LEFT);
@@ -273,6 +275,27 @@ public class MainActivity extends Activity {
             messageList.addView(play, ap);
             play.setOnClickListener(v -> playAudio(audioPath));
         }
+        if (!fromUser && videoUrl != null && videoUrl.startsWith("https://")) {
+            TextView openVideo = text("▶  باز کردن ویدیوی ساخته‌شده", 14, Color.WHITE, true);
+            openVideo.setGravity(Gravity.CENTER);
+            openVideo.setPadding(dp(14), dp(11), dp(14), dp(11));
+            openVideo.setBackground(rounded(0xff3b3b3b, 18));
+            LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(-2, -2);
+            vp.leftMargin = dp(35);
+            vp.bottomMargin = dp(8);
+            messageList.addView(openVideo, vp);
+            openVideo.setOnClickListener(v -> {
+                try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(videoUrl))); }
+                catch (Exception e) { Toast.makeText(this, "بازکردن ویدیو ممکن نشد.", Toast.LENGTH_SHORT).show(); }
+            });
+        }
+    }
+
+    private boolean isVideoGenerationRequest(String question) {
+        String q = question.toLowerCase();
+        boolean mentionsVideo = q.contains("ویدیو") || q.contains("ویدئو") || q.contains("video");
+        boolean asksToCreate = q.contains("بساز") || q.contains("بسازش") || q.contains("تولید کن") || q.contains("ایجاد کن") || q.contains("درست کن") || q.contains("generate") || q.contains("create");
+        return mentionsVideo && asksToCreate;
     }
 
     private void playAudio(String path) {
@@ -302,6 +325,14 @@ public class MainActivity extends Activity {
         if (busy) return;
         String question = composer.getText().toString().trim();
         if (question.isEmpty()) return;
+        if (isVideoGenerationRequest(question) && !question.equals(confirmedVideoPrompt)) {
+            new AlertDialog.Builder(this).setTitle("هزینهٔ ساخت ویدیو")
+                    .setMessage("ساخت یک ویدیوی ۶ ثانیه‌ای با کیفیت 720p از طریق سرویس ابری ممکن است حدود ۰٫۱۸ دلار هزینه داشته باشد و مبلغ نهایی به حساب Cloudflare بستگی دارد. فقط اگر صاحب حساب اجازهٔ استفادهٔ پولی داده است ادامه بده.")
+                    .setPositiveButton("ادامه", (d, w) -> { confirmedVideoPrompt = question; composer.setText(question); sendMessage(); })
+                    .setNegativeButton("لغو", null).show();
+            return;
+        }
+        if (question.equals(confirmedVideoPrompt)) confirmedVideoPrompt = null;
         composer.setText("");
         ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE))
                 .hideSoftInputFromWindow(composer.getWindowToken(), 0);
@@ -326,11 +357,12 @@ public class MainActivity extends Activity {
             final ChatResult result = answer;
             runOnUiThread(() -> {
                 messageList.removeView(typing);
-                addMessage(result.text, false, result.imagePath, result.audioPath);
+                addMessage(result.text, false, result.imagePath, result.audioPath, result.videoUrl);
                 try {
                     JSONObject saved = new JSONObject().put("role", "assistant").put("content", result.text);
                     if (result.imagePath != null) saved.put("image_path", result.imagePath);
                     if (result.audioPath != null) saved.put("audio_path", result.audioPath);
+                    if (result.videoUrl != null) saved.put("video_url", result.videoUrl);
                     history.add(saved);
                     while (history.size() > 60) history.remove(0);
                     saveHistory();
@@ -357,7 +389,7 @@ public class MainActivity extends Activity {
         HttpURLConnection connection = (HttpURLConnection)new URL(API + "/v1/chat/completions").openConnection();
         connection.setRequestMethod("POST");
         connection.setConnectTimeout(20000);
-        connection.setReadTimeout(120000);
+        connection.setReadTimeout(240000);
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
         try (OutputStream out = connection.getOutputStream()) {
@@ -386,6 +418,17 @@ public class MainActivity extends Activity {
         if (audio != null) {
             String encoded = audio.optString("b64_json", "");
             if (!encoded.isEmpty()) result.audioPath = saveBase64(encoded, ".mp3");
+        }
+        JSONObject video = response.optJSONObject("video");
+        if (video != null) result.videoUrl = video.optString("url", null);
+        JSONArray sources = response.optJSONArray("sources");
+        if (sources != null && sources.length() > 0) {
+            StringBuilder sourceText = new StringBuilder(result.text).append("\n\nمنابع جست‌وجو:");
+            for (int i = 0; i < sources.length(); i++) {
+                JSONObject source = sources.optJSONObject(i);
+                if (source != null) sourceText.append("\n[").append(i + 1).append("] ").append(source.optString("title", "منبع")).append("\n").append(source.optString("url", ""));
+            }
+            result.text = sourceText.toString();
         }
         return result;
     }
