@@ -70,3 +70,8 @@ The frontend now includes a separate entry point for the planned 2D video engine
 ## PixAI VideoEngine 2D
 
 The first video-generation route is deployed on the Cloudflare Worker at `POST /v1/videos/generations`, using the `lightricks/ltx-2-3-fast` model through Workers AI. The UI supports text-to-video and optional image-to-video by HTTPS image URL, with six-second 720p clips. Video generation is billed by Cloudflare and is not unlimited or free. The model adapter stays server-side so the provider can be replaced independently. Actual provider generation still needs an end-to-end runtime test.
+
+
+## PixAI MusicEngine
+
+A separate text-to-music mode proxies requests through the Cloudflare Worker to Stability AI Stable Audio 2.5. Configure `STABILITY_API_KEY` as a Worker secret. Each generation costs 20 credits; new accounts start with 25 credits, so this is a one-generation starter allowance, not unlimited free use. Credentials remain server-side.
