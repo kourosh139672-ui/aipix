@@ -36,6 +36,14 @@ const promptEl = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
 const welcome = document.getElementById("welcome");
 let history = [];
+const PIXAI_CLIENT_ID = (() => {
+  let id = localStorage.getItem("pixai_client_id");
+  if (!id) {
+    id = (window.crypto?.randomUUID?.() || ("px" + Date.now().toString(36) + Math.random().toString(36).slice(2)));
+    localStorage.setItem("pixai_client_id", id);
+  }
+  return id;
+})();
 let busy = false;
 let codeMode = false;
 let videoMode = false;
@@ -154,6 +162,7 @@ async function sendMessage(text) {
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + config.token },
       body: JSON.stringify({
         model: "auto",
+        client_id: PIXAI_CLIENT_ID,
         messages: codeMode ? history : [{ role: "system", content: SYSTEM_PROMPT }, ...history],
         max_tokens: codeMode ? 2048 : 768
       })
