@@ -40,6 +40,10 @@ public class MainActivity extends Activity {
     private final ArrayList<JSONObject> conversations = new ArrayList<>();
     private String currentConversationId;
     private String clientId;
+    private int reasoningLevel;
+    private boolean memoryEnabled;
+    private boolean lightTheme;
+    private String personalNotes;
     private LinearLayout root, messageList;
     private ScrollView scroll;
     private EditText composer;
@@ -58,6 +62,10 @@ public class MainActivity extends Activity {
             clientId = UUID.randomUUID().toString().replace("-", "");
             getPreferences(0).edit().putString("client_id", clientId).apply();
         }
+        reasoningLevel = getPreferences(0).getInt("reasoning_level", 2);
+        memoryEnabled = getPreferences(0).getBoolean("memory_enabled", true);
+        lightTheme = getPreferences(0).getBoolean("light_theme", false);
+        personalNotes = getPreferences(0).getString("personal_notes", "");
         restoreHistory();
         buildInterface();
         renderHistory();
@@ -93,28 +101,30 @@ public class MainActivity extends Activity {
     private void buildInterface() {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xff212121);
+        root.setBackgroundColor(lightTheme ? 0xfff7f7f7 : 0xff212121);
         setContentView(root);
 
         LinearLayout top = new LinearLayout(this);
         top.setGravity(Gravity.CENTER_VERTICAL);
         top.setPadding(dp(12), dp(8), dp(12), dp(8));
-        top.setBackgroundColor(0xff212121);
+        top.setBackgroundColor(lightTheme ? 0xfff7f7f7 : 0xff212121);
 
         TextView historyButton = action("☰");
+        historyButton.setTextColor(lightTheme ? 0xff202020 : Color.WHITE);
         top.addView(historyButton, new LinearLayout.LayoutParams(dp(42), dp(42)));
-        historyButton.setOnClickListener(v -> showHistory());
+        historyButton.setOnClickListener(v -> showSideMenu());
 
         LinearLayout brand = new LinearLayout(this);
         brand.setOrientation(LinearLayout.VERTICAL);
         brand.setGravity(Gravity.CENTER);
-        TextView title = text("PixAI", 19, Color.WHITE, true);
+        TextView title = text("PixAI", 19, lightTheme ? 0xff202020 : Color.WHITE, true);
         TextView model = text("PixCore 1  ▾", 11, 0xffb4b4b4, false);
         brand.addView(title);
         brand.addView(model);
         top.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
 
         TextView newChat = action("＋");
+        newChat.setTextColor(lightTheme ? 0xff202020 : Color.WHITE);
         top.addView(newChat, new LinearLayout.LayoutParams(dp(42), dp(42)));
         newChat.setOnClickListener(v -> newChat());
         root.addView(top);
@@ -125,6 +135,7 @@ public class MainActivity extends Activity {
 
         scroll = new ScrollView(this);
         scroll.setFillViewport(true);
+        scroll.setBackgroundColor(lightTheme ? 0xfff7f7f7 : 0xff212121);
         scroll.setClipToPadding(false);
         messageList = new LinearLayout(this);
         messageList.setOrientation(LinearLayout.VERTICAL);
@@ -135,16 +146,16 @@ public class MainActivity extends Activity {
         LinearLayout composerArea = new LinearLayout(this);
         composerArea.setOrientation(LinearLayout.VERTICAL);
         composerArea.setPadding(dp(12), dp(8), dp(12), dp(4));
-        composerArea.setBackgroundColor(0xff212121);
+        composerArea.setBackgroundColor(lightTheme ? 0xfff7f7f7 : 0xff212121);
 
         LinearLayout inputShell = new LinearLayout(this);
         inputShell.setGravity(Gravity.BOTTOM | Gravity.CENTER_VERTICAL);
         inputShell.setPadding(dp(8), dp(5), dp(7), dp(5));
-        inputShell.setBackground(rounded(0xff303030, 27));
+        inputShell.setBackground(rounded(lightTheme ? 0xffe9e9e9 : 0xff303030, 27));
 
         composer = new EditText(this);
-        composer.setTextColor(Color.WHITE);
-        composer.setHintTextColor(0xffa5a5a5);
+        composer.setTextColor(lightTheme ? 0xff202020 : Color.WHITE);
+        composer.setHintTextColor(lightTheme ? 0xff777777 : 0xffa5a5a5);
         composer.setHint("پیامی برای PixAI بنویس...");
         composer.setTextSize(15);
         composer.setPadding(dp(10), dp(9), dp(8), dp(9));
@@ -188,10 +199,10 @@ public class MainActivity extends Activity {
             welcome.setOrientation(LinearLayout.VERTICAL);
             welcome.setGravity(Gravity.CENTER);
             welcome.setPadding(dp(12), dp(28), dp(12), dp(28));
-            TextView logo = text("✳", 42, Color.WHITE, true);
+            TextView logo = text("✳", 42, lightTheme ? 0xff202020 : Color.WHITE, true);
             logo.setGravity(Gravity.CENTER);
             welcome.addView(logo);
-            TextView greeting = text("امروز چطور می‌تونم کمکت کنم؟", 21, Color.WHITE, true);
+            TextView greeting = text("امروز چطور می‌تونم کمکت کنم؟", 21, lightTheme ? 0xff202020 : Color.WHITE, true);
             greeting.setGravity(Gravity.CENTER);
             greeting.setPadding(0, dp(12), 0, dp(7));
             welcome.addView(greeting);
@@ -333,13 +344,13 @@ public class MainActivity extends Activity {
 
     private ChatResult requestChat(String question) throws Exception {
         JSONArray messages = new JSONArray();
-        messages.put(new JSONObject().put("role", "system").put("content", SYSTEM));
+        String profile = memoryEnabled ? "\\nاطلاعات پایدار مجاز درباره کاربر: نام او کوروش است. با او فارسی روان، صمیمی و محترمانه صحبت کن. این اطلاعات را در همه گفتگوهای این نصب در نظر بگیر. " + personalNotes : "";\n        messages.put(new JSONObject().put("role", "system").put("content", SYSTEM + profile));
         int start = Math.max(0, history.size() - 24);
         for (int i = start; i < history.size(); i++) messages.put(history.get(i));
         JSONObject payload = new JSONObject()
                 .put("model", "auto")
                 .put("client_id", clientId)
-                .put("reasoning_level", 2)
+                .put("reasoning_level", reasoningLevel)
                 .put("messages", messages)
                 .put("max_tokens", 1400);
         HttpURLConnection connection = (HttpURLConnection)new URL(API + "/v1/chat/completions").openConnection();
@@ -426,6 +437,85 @@ public class MainActivity extends Activity {
                 })
                 .setPositiveButton("گفتگوی جدید", (d, w) -> newChat())
                 .setNegativeButton("بستن", null).show();
+    }
+
+
+    private void showSideMenu() {
+        String[] items = {"＋ گفتگوی جدید", "گفتگوهای قبلی", "⚙ تنظیمات"};
+        new AlertDialog.Builder(this).setTitle("PixAI")
+                .setItems(items, (d, which) -> {
+                    if (which == 0) newChat();
+                    else if (which == 1) showHistory();
+                    else showSettings();
+                }).show();
+    }
+
+    private void showSettings() {
+        String[] items = {"مدیریت حافظه", "اندازهٔ تفکر", "ظاهر برنامه", "شخصی‌سازی"};
+        new AlertDialog.Builder(this).setTitle("تنظیمات")
+                .setItems(items, (d, which) -> {
+                    if (which == 0) memorySettings();
+                    else if (which == 1) reasoningSettings();
+                    else if (which == 2) appearanceSettings();
+                    else personalizationSettings();
+                }).show();
+    }
+
+    private void memorySettings() {
+        String[] items = {memoryEnabled ? "خاموش‌کردن حافظه" : "روشن‌کردن حافظه", "مشاهدهٔ اطلاعات ذخیره‌شده", "پاک‌کردن اطلاعات ذخیره‌شده"};
+        new AlertDialog.Builder(this).setTitle("مدیریت حافظه")
+                .setItems(items, (d, which) -> {
+                    if (which == 0) {
+                        memoryEnabled = !memoryEnabled;
+                        getPreferences(0).edit().putBoolean("memory_enabled", memoryEnabled).apply();
+                        Toast.makeText(this, memoryEnabled ? "حافظه روشن شد." : "حافظه خاموش شد.", Toast.LENGTH_SHORT).show();
+                    } else if (which == 1) {
+                        new AlertDialog.Builder(this).setTitle("حافظهٔ PixAI")
+                                .setMessage("نام: کوروش\\n" + (personalNotes.isEmpty() ? "یادداشت شخصی دیگری ذخیره نشده." : personalNotes))
+                                .setPositiveButton("بستن", null).show();
+                    } else {
+                        personalNotes = "";
+                        getPreferences(0).edit().remove("personal_notes").apply();
+                        Toast.makeText(this, "یادداشت‌های شخصی پاک شدند.", Toast.LENGTH_SHORT).show();
+                    }
+                }).show();
+    }
+
+    private void reasoningSettings() {
+        String[] levels = {"۱ - سریع", "۲ - متعادل", "۳ - عمیق"};
+        new AlertDialog.Builder(this).setTitle("اندازهٔ تفکر")
+                .setSingleChoiceItems(levels, reasoningLevel - 1, (d, which) -> {
+                    reasoningLevel = which + 1;
+                    getPreferences(0).edit().putInt("reasoning_level", reasoningLevel).apply();
+                    d.dismiss();
+                }).setNegativeButton("بستن", null).show();
+    }
+
+    private void appearanceSettings() {
+        String[] themes = {"تیره", "روشن"};
+        new AlertDialog.Builder(this).setTitle("ظاهر برنامه")
+                .setSingleChoiceItems(themes, lightTheme ? 1 : 0, (d, which) -> {
+                    lightTheme = which == 1;
+                    getPreferences(0).edit().putBoolean("light_theme", lightTheme).apply();
+                    d.dismiss();
+                    buildInterface();
+                    renderHistory();
+                }).setNegativeButton("بستن", null).show();
+    }
+
+    private void personalizationSettings() {
+        EditText input = new EditText(this);
+        input.setText(personalNotes);
+        input.setHint("مثلاً موضوعات مورد علاقه یا ترجیح پاسخ‌گویی");
+        input.setMinLines(3);
+        new AlertDialog.Builder(this).setTitle("شخصی‌سازی")
+                .setMessage("یادداشت‌های غیرحساس برای گفتگوهای بعدی")
+                .setView(input)
+                .setPositiveButton("ذخیره", (d, w) -> {
+                    personalNotes = input.getText().toString().trim();
+                    if (personalNotes.length() > 700) personalNotes = personalNotes.substring(0, 700);
+                    getPreferences(0).edit().putString("personal_notes", personalNotes).apply();
+                }).setNegativeButton("لغو", null).show();
     }
 
     private void startVoice() {
