@@ -247,7 +247,7 @@ function startVoiceTyping() {
   recognition.onresult = event => {
     let finalText = "";
     let interimText = "";
-    for (let i = event.resultIndex; i < event.results.length; i++) {
+    for (let i = 0; i < event.results.length; i++) {
       const part = event.results[i][0].transcript;
       if (event.results[i].isFinal) finalText += part;
       else interimText += part;
