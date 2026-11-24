@@ -193,10 +193,17 @@ async function generateVideo(prompt) {
   finally { setBusy(false); promptEl.focus(); }
 }
 
+
+async function createMotionVideo(userPrompt){
+ if(busy)return;const config=getApiConfig();if(!config)return;addMessage("user",userPrompt);setBusy(true);const status=addMessage("typing","PixAI در حال طراحی صحنه دوبعدی است…");
+ const instruction='تو طراح صحنه PixAI Motion Engine هستی. دستور فارسی کاربر را به انیمیشن دوبعدی تبدیل کن. فقط JSON معتبر بده: {"title":"عنوان","background":"#b9e5ff","duration":6,"objects":[{"type":"car|circle|rect|text|tree|cloud|sun|person","x":50,"y":65,"width":18,"height":18,"color":"#ef4444","text":"","motion":"left-right|right-left|bounce|rotate|none","speed":12}]}. مختصات درصدی، حداکثر 12 شیء، مدت 2 تا 15 ثانیه. فقط JSON.';
+ try{const r=await fetch(config.url+"/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+config.token},body:JSON.stringify({model:"auto",client_id:PIXAI_CLIENT_ID,reasoning_level:reasoningLevel,messages:[{role:"system",content:instruction},{role:"user",content:userPrompt}],max_tokens:1000})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||(d.error&&d.error.message)||"خطای سرویس "+r.status);let raw=d.choices&&d.choices[0]&&d.choices[0].message?d.choices[0].message.content:"";raw=raw.trim().replace(/^`{3}(?:json)?\s*/i,"").replace(/\s*`{3}$/,"");let a=raw.indexOf("{"),z=raw.lastIndexOf("}");if(a<0||z<=a)throw Error("مدل JSON معتبر برنگرداند.");let scene=JSON.parse(raw.slice(a,z+1));status.remove();const card=document.createElement("section");card.className="message assistant motion-result";const title=document.createElement("strong");title.textContent="PixAI Motion Engine · "+(scene.title||"انیمیشن دوبعدی");const stage=document.createElement("div");stage.className="motion-stage";const controls=document.createElement("div");controls.className="motion-actions";const p=document.createElement("button"),s=document.createElement("button"),e=document.createElement("button");p.textContent="▶ پیش‌نمایش";s.textContent="■ توقف";e.textContent="⬇ ساخت ویدیو";[p,s,e].forEach(x=>x.type="button");const note=document.createElement("small");note.textContent="رندر محلی · خروجی WebM";controls.append(p,s,e);card.append(title,stage,controls,note);messagesEl.appendChild(card);const engine=window.PixAIMotionEngine.mount(stage,scene);p.onclick=()=>engine.play();s.onclick=()=>engine.stop();e.onclick=async()=>{e.disabled=true;e.textContent="در حال ضبط…";try{let blob=await engine.exportVideo(),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="pixai-motion.webm";a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);e.textContent="ویدیو آماده شد"}catch(err){note.textContent=String(err.message||err);e.textContent="تلاش دوباره"}finally{e.disabled=false}};messagesEl.scrollTop=messagesEl.scrollHeight}catch(err){status.remove();addMessage("assistant",String(err.message||err),"error")}finally{setBusy(false);promptEl.focus()}
+}
+
 async function sendMessage(text) {
   const clean = text.trim();
   if (!clean || busy) return;
-  if (videoMode) { addMessage('assistant', 'VideoEngine 2D هنوز به مدل تولید ویدیو متصل نشده است. این بخش فعلاً رابط اولیه است و تا اتصال سرویس، ویدیو تولید نمی‌کند.', 'error'); return; }
+  if (videoMode) { promptEl.value = ''; promptEl.style.height = 'auto'; createMotionVideo(clean); return; }
   const config = getApiConfig();
   if (!config) {
     addMessage("assistant", "اتصال PixAI تنظیم نشد. توکن خصوصی را وارد کن تا ارتباط برقرار شود.", "error");
@@ -376,7 +383,7 @@ videoModeButton?.addEventListener('click', () => {
   messagesEl.innerHTML = '';
   const panel = document.createElement('div');
   panel.className = 'welcome';
-  panel.innerHTML = videoMode ? '<div class="welcome-icon">🎬</div><h1>PixAI VideoEngine 2D</h1><p>تبدیل متن یا تصویر به انیمیشن دوبعدی</p><div class="video-controls"><label for="videoStyle">سبک</label><select id="videoStyle"><option value="2d">انیمیشن دوبعدی</option><option value="anime">انیمه دوبعدی</option><option value="cartoon">کارتونی</option></select><label for="videoImageUrl">لینک تصویر (اختیاری)</label><input id="videoImageUrl" type="url" placeholder="https://..."></div><p class="video-status">مدل LTX-2.3 Fast؛ هزینه مصرف Cloudflare اعمال می‌شود.</p>' : '<div class="welcome-icon">✦</div><h1>سلام! من PixAI هستم</h1><p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>';
+  panel.innerHTML = videoMode ? '<div class="welcome-icon">🎬</div><h1>PixAI Motion Engine</h1><p>دستور فارسی بنویس؛ LLM صحنه را طراحی می‌کند و موتور Canvas آن را روی دستگاه متحرک می‌سازد.</p><p class="video-status">رندر محلی · بدون API پولی ویدیوساز · خروجی WebM</p>' : '<div class="welcome-icon">✦</div><h1>سلام! من PixAI هستم</h1><p>هر چیزی می‌خوای بپرس؛ از همین‌جا شروع کنیم.</p>';
   messagesEl.appendChild(panel);
   videoModeButton.classList.toggle('active', videoMode);
   codeModeButton?.classList.toggle("active", codeMode);
