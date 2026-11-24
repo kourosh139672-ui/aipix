@@ -56,3 +56,7 @@ This is tool orchestration through function calling and instructions, not a new 
 ## PixAI Code (Qwen)
 
 A separate Code mode has been added to the frontend. It calls `POST /v1/code/completions` on the Cloudflare Worker and uses Alibaba Cloud Model Studio `qwen3-coder-flash`. Configure `QWEN_API_URL` (the workspace/region-specific OpenAI-compatible base URL) and `QWEN_API_KEY` as Worker-side settings before using it. The provider key is never placed in browser code. The first milestone generates and reviews code; it does not execute code or write files automatically. Those project tools will be implemented separately with explicit validation and safe execution boundaries.
+
+
+### Project file export
+PixAI Code supports multi-file project responses. It recognizes `### FILE: path/to/file.ext` sections and provides individual file downloads in the browser. This is a client-side export feature; it does not execute code or write to GitHub.
