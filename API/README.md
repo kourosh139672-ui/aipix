@@ -1,6 +1,6 @@
 # AIPix API contracts
 
-PixAI Core and ImageEngine are separate services.
+PixAI Core, ImageEngine, VideoEngine, and MusicEngine are coordinated through one conversational interface.
 
 ## PixAI Core
 
@@ -26,9 +26,10 @@ The app should only display an image as generated after the ImageEngine returns 
 
 The Cloudflare Worker exposes model-guided tool execution through the chat endpoint.
 
-Currently available tool:
+Currently available tools:
 
-- `generate_image`: called by GLM-4.7-Flash when the user explicitly requests a new image. The Worker executes FLUX.2 Klein 4B and returns the generated image in `images[0].b64_json` alongside the assistant text.
+- `generate_image`: called by GLM-4.7-Flash when the user explicitly requests an image.
+- `generate_music`: called by GLM-4.7-Flash when the user explicitly asks PixAI to compose or generate music. The Worker calls Stable Audio 2.5 and returns audio as `audio.b64_json` with `audio.mime_type` alongside the assistant text. Users request music naturally in the ordinary chat; there is no separate Music mode or button.
 
 The browser renders an image only when the API returns image data. The assistant must not claim success when tool execution fails. Add future tools by defining a validated schema, implementing the server-side handler in the Worker, returning structured results, and adding any required UI renderer. Never execute arbitrary code or accept provider credentials from model-generated arguments.
 
